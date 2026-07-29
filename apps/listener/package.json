@@ -6,7 +6,10 @@
   "scripts": {
     "lint": "oxlint --fix",
     "format": "oxfmt --write",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start": "bun run src/main.ts",
+    "dev": "bun --watch run src/main.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@solana/kit": "^7.0.0",
