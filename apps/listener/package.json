@@ -1,0 +1,14 @@
+{
+  "name": "@jupiter-offerbot/listener",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "oxlint --fix",
+    "format": "oxfmt --write",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "entry": "src/main.ts"
+}
