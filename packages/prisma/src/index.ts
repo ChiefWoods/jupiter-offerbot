@@ -12,6 +12,8 @@ export function createPrismaClient({ databaseUrl }: PrismaClientConfig): PrismaC
 }
 
 export { Prisma } from "../generated/prisma/client";
+export { PrismaClient } from "../generated/prisma/client";
+export * from "./repositories";
 
 export type {
   NotificationJob,
