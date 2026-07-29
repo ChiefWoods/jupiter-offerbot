@@ -8,7 +8,11 @@
     "format": "oxfmt --write",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@solana/kit": "^7.0.0",
+    "@triton-one/yellowstone-grpc": "^5.0.9",
+    "zod": "^4.4.3"
+  },
   "devDependencies": {},
   "entry": "src/main.ts"
 }
