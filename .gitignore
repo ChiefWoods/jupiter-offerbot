@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# generated Prisma client
+packages/prisma/generated
+
 # output
 out
 dist
