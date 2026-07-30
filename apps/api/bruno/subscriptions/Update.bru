@@ -1,0 +1,24 @@
+meta {
+  name: Update subscription
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{apiUrl}}/v1/subscriptions/{{subscriptionId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bridgeToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  { "maxApy": 600 }
+}
+
+assert {
+  res.status: eq 200
+}

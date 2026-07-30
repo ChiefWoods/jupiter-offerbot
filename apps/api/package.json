@@ -1,0 +1,25 @@
+{
+  "name": "@jupiter-offerbot/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./rpc": "./src/rpc.ts"
+  },
+  "scripts": {
+    "lint": "oxlint --fix",
+    "format": "oxfmt --write",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "start": "bun run src/main.ts",
+    "dev": "bun --watch run src/main.ts"
+  },
+  "dependencies": {
+    "@jupiter-offerbot/prisma": "workspace:*",
+    "@jupiter-offerbot/redis": "workspace:*",
+    "@solana/kit": "^7.0.0",
+    "hono": "^4.11.9",
+    "zod": "^4.4.3"
+  },
+  "entry": "src/main.ts"
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Ingest OfferCreated event
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{apiUrl}}/v1/offers
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{listenerToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "offerAddress": "offer-account-address",
+    "mint": "{{mint}}",
+    "apy": 700,
+    "signature": "transaction-signature",
+    "slot": 1,
+    "listedAt": "2026-07-28T00:00:00.000Z"
+  }
+}
+
+assert {
+  res.status: eq 202
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Create all-APY subscription
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{apiUrl}}/v1/subscriptions
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bridgeToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "platform": "discord",
+    "userId": "42",
+    "mint": "{{mint}}",
+    "maxApy": null
+  }
+}
+
+assert {
+  res.status: eq 201
+}

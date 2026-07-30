@@ -1,0 +1,19 @@
+meta {
+  name: List subscriptions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{apiUrl}}/v1/subscriptions?platform=discord&userId=42
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bridgeToken}}
+}
+
+assert {
+  res.status: eq 200
+}

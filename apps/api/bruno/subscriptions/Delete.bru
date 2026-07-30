@@ -1,0 +1,19 @@
+meta {
+  name: Delete subscription
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{apiUrl}}/v1/subscriptions/{{subscriptionId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{bridgeToken}}
+}
+
+assert {
+  res.status: eq 204
+}
