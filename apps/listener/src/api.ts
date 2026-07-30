@@ -1,18 +1,18 @@
+import { hc } from "hono/client";
+import type { AppType } from "@jupiter-offerbot/api/rpc";
 import { env } from "./env";
 import { type OfferCreated } from "./offerbook";
 
+const api = hc<AppType>(env.API_BASE_URL);
+
 export async function submitOffer(offer: OfferCreated): Promise<void> {
-  const response = await fetch(`${env.API_BASE_URL}/offers`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      authorization: `Bearer ${env.LISTENER_API_TOKEN}`,
-    },
-    body: JSON.stringify(offer),
-  });
+  const response = await api.v1.offers.$post(
+    { json: offer },
+    { headers: { authorization: `Bearer ${env.LISTENER_API_TOKEN}` } },
+  );
 
   if (!response.ok) {
-    throw new Error(`Offer ingestion failed with HTTP ${response.status}`);
+    throw new Error(`offer ingestion failed with HTTP ${response.status}`);
   }
 
   console.info(
