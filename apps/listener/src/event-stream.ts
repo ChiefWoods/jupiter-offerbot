@@ -1,4 +1,5 @@
 import { getBase58Decoder } from "@solana/kit";
+import { createLogger, serializeError } from "@jupiter-offerbot/logger";
 import {
   CommitmentLevel,
   type SubscribeRequest,
@@ -16,6 +17,7 @@ import { grpcClient } from "./solana";
 
 const base58Decoder = getBase58Decoder();
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
+const logger = createLogger("listener");
 
 function getTransactionOfferAddresses(update: SubscribeUpdate): string[] {
   const transaction = update.transaction?.transaction?.transaction;
@@ -120,10 +122,16 @@ export async function streamOfferbookEvents(
   let lastSubmittedSlot: bigint | undefined;
   let reconnectAttempt = 0;
 
+  logger.info("Connecting to Yellowstone gRPC");
   await grpcClient.connect();
+  logger.info("Connected to Yellowstone gRPC");
 
   while (!signal.aborted) {
     try {
+      logger.info(
+        "Opening Offerbook stream",
+        lastSubmittedSlot === undefined ? {} : { fromSlot: lastSubmittedSlot.toString() },
+      );
       const stream = await grpcClient.subscribe(createOfferbookSubscription(lastSubmittedSlot));
       const abortStream = () => stream.destroy();
       signal.addEventListener("abort", abortStream, { once: true });
@@ -139,9 +147,17 @@ export async function streamOfferbookEvents(
             lastSubmittedSlot = BigInt(offer.slot);
           }
         }
+
+        if (!signal.aborted) {
+          logger.warn("Offerbook stream ended; reopening");
+        }
       } finally {
         signal.removeEventListener("abort", abortStream);
         stream.destroy();
+
+        if (signal.aborted) {
+          logger.info("Offerbook stream closed");
+        }
       }
 
       reconnectAttempt = 0;
@@ -153,13 +169,10 @@ export async function streamOfferbookEvents(
       const delay =
         RECONNECT_DELAYS_MS[Math.min(reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)] ?? 30_000;
       reconnectAttempt += 1;
-      console.error(
-        JSON.stringify({
-          message: "Offerbook stream disconnected",
-          retryInMs: delay,
-          error: error instanceof Error ? error.message : String(error),
-        }),
-      );
+      logger.error("Offerbook stream disconnected", {
+        retryInMs: delay,
+        ...serializeError(error),
+      });
       await Bun.sleep(delay);
     }
   }

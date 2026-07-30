@@ -1,3 +1,4 @@
+import { createLogger, serializeError } from "@jupiter-offerbot/logger";
 import type { NotificationJobRepository } from "@jupiter-offerbot/prisma";
 import { signWebhook } from "./signatures";
 
@@ -5,6 +6,7 @@ type OutboxOptions = {
   endpoints: Record<"discord" | "telegram", { url: string; secret: string }>;
 };
 const backoff = [10_000, 60_000, 300_000, 1_800_000, 7_200_000];
+const logger = createLogger("worker");
 
 export function createOutboxWorker(
   notificationJobs: NotificationJobRepository,
@@ -45,12 +47,21 @@ export function createOutboxWorker(
           throw new Error(`webhook returned HTTP ${response.status}`);
         } catch (cause) {
           const attempts = job.attempts + 1;
+          const retryInMs = attempts < 5 ? backoff[attempts - 1] : undefined;
           await notificationJobs.markFailed(job.id, {
             attempts,
             lastError: String(cause),
-            ...(attempts < 5 && {
-              availableAt: new Date(Date.now() + backoff[attempts - 1]!),
+            ...(retryInMs !== undefined && {
+              availableAt: new Date(Date.now() + retryInMs),
             }),
+          });
+          logger.error("Webhook delivery failed", {
+            notificationId: job.id,
+            subscriptionId: job.subscriptionId,
+            platform: job.subscription.platform,
+            attempts,
+            retryInMs,
+            ...serializeError(cause),
           });
         }
       }

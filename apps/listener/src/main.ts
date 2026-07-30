@@ -1,11 +1,27 @@
 import { submitOffer } from "./api";
 import { streamOfferbookEvents } from "./event-stream";
+import { createLogger, serializeError } from "@jupiter-offerbot/logger";
+
+const logger = createLogger("listener");
 
 async function main() {
+  logger.info("Listener starting");
+
   const controller = new AbortController();
-  process.once("SIGINT", () => controller.abort());
-  process.once("SIGTERM", () => controller.abort());
+  const shutdown = (signal: "SIGINT" | "SIGTERM") => {
+    logger.info("Listener shutdown requested", { signal });
+    controller.abort();
+  };
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+
   await streamOfferbookEvents(submitOffer, controller.signal);
+  logger.info("Listener stopped");
 }
 
-await main();
+try {
+  await main();
+} catch (error) {
+  logger.fatal("Listener exited unexpectedly", serializeError(error));
+  process.exitCode = 1;
+}

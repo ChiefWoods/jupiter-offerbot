@@ -31,6 +31,7 @@
       "name": "@jupiter-offerbot/listener",
       "version": "0.0.0",
       "dependencies": {
+        "@jupiter-offerbot/logger": "workspace:*",
         "@solana/kit": "^7.0.0",
         "@triton-one/yellowstone-grpc": "^5.0.9",
         "hono": "^4.11.9",
@@ -42,6 +43,7 @@
       "name": "@jupiter-offerbot/worker",
       "version": "0.0.0",
       "dependencies": {
+        "@jupiter-offerbot/logger": "workspace:*",
         "@jupiter-offerbot/prisma": "workspace:*",
         "zod": "^4.4.3",
       },

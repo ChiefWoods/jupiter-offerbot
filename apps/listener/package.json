@@ -12,6 +12,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@jupiter-offerbot/logger": "workspace:*",
     "@solana/kit": "^7.0.0",
     "@triton-one/yellowstone-grpc": "^5.0.9",
     "hono": "^4.11.9",
