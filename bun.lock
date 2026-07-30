@@ -26,6 +26,14 @@
         "zod": "^4.4.3",
       },
     },
+    "apps/worker": {
+      "name": "@jupiter-offerbot/worker",
+      "version": "0.0.0",
+      "dependencies": {
+        "@jupiter-offerbot/prisma": "workspace:*",
+        "zod": "^4.4.3",
+      },
+    },
     "packages/prisma": {
       "name": "@jupiter-offerbot/prisma",
       "version": "0.0.0",
@@ -62,6 +70,8 @@
     "@jupiter-offerbot/prisma": ["@jupiter-offerbot/prisma@workspace:packages/prisma"],
 
     "@jupiter-offerbot/redis": ["@jupiter-offerbot/redis@workspace:packages/redis"],
+
+    "@jupiter-offerbot/worker": ["@jupiter-offerbot/worker@workspace:apps/worker"],
 
     "@oxfmt/binding-android-arm-eabi": ["@oxfmt/binding-android-arm-eabi@0.59.0", "", { "os": "android", "cpu": "arm" }, "sha512-bNTnfbuG7sAwb2PakMNaDukx5kXeW9duXOBeWtTOiLz3fXz3q2DlWguufPZ+c2IHEVrRXHD+M4aUgEWm841LDA=="],
 

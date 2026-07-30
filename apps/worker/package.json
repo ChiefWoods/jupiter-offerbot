@@ -1,0 +1,18 @@
+{
+  "name": "@jupiter-offerbot/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "oxlint --fix",
+    "format": "oxfmt --write",
+    "typecheck": "tsc --noEmit",
+    "start": "bun run src/main.ts",
+    "dev": "bun --watch run src/main.ts"
+  },
+  "dependencies": {
+    "@jupiter-offerbot/prisma": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "entry": "src/main.ts"
+}
