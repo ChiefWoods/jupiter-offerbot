@@ -52,6 +52,19 @@ test("/watch omits an APY as an all-APY subscription", async () => {
   expect(requests).toEqual([{ platform: "telegram", userId: "99", mint: SOL_MINT, maxApy: null }]);
 });
 
+test("/list returns the user's watched mints", async () => {
+  const commands = createCommandHandlers({
+    create: async () => {},
+    list: async () => [{ id: "subscription-1", mint: SOL_MINT, maxApy: 725 }],
+    remove: async () => true,
+  });
+  const { ctx, replies } = context("");
+
+  await commands.list(ctx);
+
+  expect(replies).toEqual([`${SOL_MINT} — 7.25%\n/unwatch ${SOL_MINT}`]);
+});
+
 test("commands reject group chats before calling the API", async () => {
   let called = false;
   const commands = createCommandHandlers({

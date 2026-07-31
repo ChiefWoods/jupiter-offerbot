@@ -35,7 +35,7 @@ if (import.meta.main) {
 
   await bot.api.setMyCommands([
     { command: "start", description: "Show Offerbot help" },
-    { command: "watches", description: "List your watched mints" },
+    { command: "list", description: "List your watched mints" },
     { command: "watch", description: "Watch a mint at an optional APY ceiling" },
     { command: "unwatch", description: "Stop watching a mint" },
   ]);

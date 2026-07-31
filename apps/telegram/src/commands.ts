@@ -39,11 +39,11 @@ export function createCommandHandlers(api: SubscriptionApi) {
         
 Commands:
   \`/watch <mint> [max_apy]\` - Watch a mint at an optional APY ceiling
-  \`/watches\` - List your watched mints
+  \`/list\` - List your watched mints
   \`/unwatch <mint>\` - Stop watching a mint`,
       );
     },
-    async watches(context: CommandContext<Context>) {
+    async list(context: CommandContext<Context>) {
       const id = await requireDirectMessage(context);
       if (!id) return;
 
