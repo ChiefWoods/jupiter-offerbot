@@ -59,7 +59,7 @@ Commands:
           subscriptions
             .map(
               (subscription) =>
-                `${subscription.mint} — ${subscription.maxApy === null ? "any APY" : formatApy(subscription.maxApy)}\n/unwatch ${subscription.mint}`,
+                `${subscription.mint} — ${subscription.maxApy === null ? "any%" : "max " + formatApy(subscription.maxApy)}`,
             )
             .join("\n\n"),
         );

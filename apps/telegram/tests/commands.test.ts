@@ -62,7 +62,7 @@ test("/list returns the user's watched mints", async () => {
 
   await commands.list(ctx);
 
-  expect(replies).toEqual([`${SOL_MINT} — 7.25%\n/unwatch ${SOL_MINT}`]);
+  expect(replies).toEqual([`${SOL_MINT} — max 7.25%`]);
 });
 
 test("commands reject group chats before calling the API", async () => {
