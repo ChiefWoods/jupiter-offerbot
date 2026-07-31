@@ -59,7 +59,7 @@ Commands:
           subscriptions
             .map(
               (subscription) =>
-                `${subscription.mint} — ${subscription.maxApy === null ? "Any APY" : formatApy(subscription.maxApy)}\n/unwatch ${subscription.mint}`,
+                `${subscription.mint} — ${subscription.maxApy === null ? "any APY" : formatApy(subscription.maxApy)}\n/unwatch ${subscription.mint}`,
             )
             .join("\n\n"),
         );
@@ -90,7 +90,7 @@ Commands:
       try {
         await api.create({ platform: "telegram", userId: id, mint, maxApy });
         await context.reply(
-          `Watching ${mint} at ${maxApy === null ? "Any APY" : `up to ${formatApy(maxApy)}`}.`,
+          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
         );
       } catch (error) {
         await context.reply(apiMessage(error));
