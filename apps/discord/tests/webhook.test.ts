@@ -61,6 +61,30 @@ test("rejects an unsigned Discord delivery", async () => {
   expect(response.status).toBe(401);
 });
 
+test("rejects a signed malformed Discord delivery as a bad request", async () => {
+  const now = 1_800_000_000_000;
+  const handler = createWebhookHandler(
+    { users: { fetch: async () => ({ send: async () => {} }) } },
+    "secret",
+    () => now,
+  );
+  const body = "not-json";
+  const timestamp = String(now / 1_000);
+
+  const response = await handler(
+    new Request("http://discord/internal/notifications", {
+      method: "POST",
+      headers: {
+        "x-offerbot-timestamp": timestamp,
+        "x-offerbot-signature": await signWebhook("secret", timestamp, body),
+      },
+      body,
+    }),
+  );
+
+  expect(response.status).toBe(400);
+});
+
 test("returns not found when the Discord user cannot receive direct messages", async () => {
   const now = 1_800_000_000_000;
   const handler = createWebhookHandler(
@@ -89,4 +113,34 @@ test("returns not found when the Discord user cannot receive direct messages", a
   );
 
   expect(response.status).toBe(404);
+});
+
+test("returns bad gateway when generic Discord delivery fails", async () => {
+  const now = 1_800_000_000_000;
+  const handler = createWebhookHandler(
+    {
+      users: {
+        fetch: async () => {
+          throw new Error("Discord unavailable");
+        },
+      },
+    },
+    "secret",
+    () => now,
+  );
+  const body = JSON.stringify(notification);
+  const timestamp = String(now / 1_000);
+
+  const response = await handler(
+    new Request("http://discord/internal/notifications", {
+      method: "POST",
+      headers: {
+        "x-offerbot-timestamp": timestamp,
+        "x-offerbot-signature": await signWebhook("secret", timestamp, body),
+      },
+      body,
+    }),
+  );
+
+  expect(response.status).toBe(502);
 });

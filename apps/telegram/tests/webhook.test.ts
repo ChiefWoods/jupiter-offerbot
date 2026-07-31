@@ -82,3 +82,27 @@ test("a signed malformed delivery is rejected as a bad request", async () => {
 
   expect(response.status).toBe(400);
 });
+
+test("returns bad gateway when Telegram delivery fails", async () => {
+  const now = 1_800_000_000_000;
+  const handler = createWebhookHandler(
+    { sendMessage: async () => Promise.reject(new Error("blocked by user")) } as unknown as Api,
+    "secret",
+    () => now,
+  );
+  const body = JSON.stringify(notification);
+  const timestamp = String(now / 1_000);
+
+  const response = await handler(
+    new Request("http://telegram/internal/notifications", {
+      method: "POST",
+      headers: {
+        "x-offerbot-timestamp": timestamp,
+        "x-offerbot-signature": await signWebhook("secret", timestamp, body),
+      },
+      body,
+    }),
+  );
+
+  expect(response.status).toBe(502);
+});

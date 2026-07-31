@@ -124,3 +124,22 @@ test("/update changes the APY of a watched mint", async () => {
   expect(updates).toEqual([{ id: "subscription-1", maxApy: 1175 }]);
   expect(replies).toEqual([`Updated ${SOL_MINT} to up to 11.75% APY.`]);
 });
+
+test("/unwatch does not remove a subscription for a different mint", async () => {
+  let removed = false;
+  const commands = createCommandHandlers({
+    create: async () => {},
+    list: async () => [{ id: "subscription-1", mint: "other-mint", maxApy: null }],
+    update: async () => {},
+    remove: async () => {
+      removed = true;
+      return true;
+    },
+  });
+  const { ctx, replies } = context(SOL_MINT);
+
+  await commands.unwatch(ctx);
+
+  expect(removed).toBeFalse();
+  expect(replies).toEqual(["There is no subscription for that mint to cancel."]);
+});
