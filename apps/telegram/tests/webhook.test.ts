@@ -15,20 +15,22 @@ const notification = {
   listedAt: "2026-07-28T00:00:00.000Z",
 };
 
-function botApi(onSendMessage: (chatId: string, text: string) => void = () => undefined): Api {
+function botApi(
+  onSendMessage: (chatId: string, text: string, options: unknown) => void = () => undefined,
+): Api {
   return {
-    sendMessage: async (chatId: string | number, text: string) => {
-      onSendMessage(String(chatId), text);
+    sendMessage: async (chatId: string | number, text: string, options: unknown) => {
+      onSendMessage(String(chatId), text, options);
       return {};
     },
   } as unknown as Api;
 }
 
 test("a valid signed delivery sends the notification to its Telegram user", async () => {
-  const sent: Array<[string, string]> = [];
+  const sent: Array<[string, string, unknown]> = [];
   const now = 1_800_000_000_000;
   const handler = createWebhookHandler(
-    botApi((chatId, text) => sent.push([chatId, text])),
+    botApi((chatId, text, options) => sent.push([chatId, text, options])),
     "secret",
     () => now,
   );
@@ -48,7 +50,24 @@ test("a valid signed delivery sends the notification to its Telegram user", asyn
   );
 
   expect(response.status).toBe(204);
-  expect(sent).toEqual([["99", expect.stringContaining("7.25%")]]);
+  expect(sent).toEqual([
+    [
+      "99",
+      expect.stringContaining("7.25%"),
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "View offer",
+                url: "https://offerbook.jup.ag/tokens/borrow?offerId=offer-address",
+              },
+            ],
+          ],
+        },
+      },
+    ],
+  ]);
 });
 
 test("an unsigned delivery is rejected", async () => {

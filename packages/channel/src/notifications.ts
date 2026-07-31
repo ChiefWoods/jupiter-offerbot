@@ -2,6 +2,8 @@ import { signWebhook } from "@jupiter-offerbot/common";
 import { z } from "zod";
 import { formatApy } from "./apy";
 
+const OFFERBOOK_BASE_URL_BORROW = "https://offerbook.jup.ag/tokens/borrow";
+
 export const NotificationSchema = z.object({
   notificationId: z.uuid(),
   subscriptionId: z.uuid(),
@@ -24,14 +26,18 @@ export function constantTimeEqual(left: string, right: string): boolean {
   return different === 0;
 }
 
-export function renderNotification(notification: Notification): string {
-  return [
-    "New offer listed!",
-    `Mint: ${notification.mint}${notification.symbol ? ` (${notification.symbol})` : ""}`,
-    `APY: ${formatApy(notification.apy)}`,
-    `Offer: ${notification.offerAddress}`,
-    `Transaction: ${notification.signature}`,
-  ].join("\n");
+export function renderNotification(notification: Notification): {
+  message: string;
+  offerUrl: string;
+} {
+  return {
+    message: [
+      "New offer listed!",
+      `Mint: ${notification.mint}${notification.symbol ? ` (${notification.symbol})` : ""}`,
+      `APY: ${formatApy(notification.apy)}`,
+    ].join("\n"),
+    offerUrl: `${OFFERBOOK_BASE_URL_BORROW}?offerId=${notification.offerAddress}`,
+  };
 }
 
 export async function parseNotificationRequest(

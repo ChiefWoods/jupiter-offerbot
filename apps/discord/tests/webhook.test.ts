@@ -15,12 +15,14 @@ const notification = {
 };
 
 test("a valid signed Discord delivery sends a direct message to its envelope user", async () => {
-  const sent: string[] = [];
+  const sent: Array<{ id: string; message: unknown }> = [];
   const now = 1_800_000_000_000;
   const handler = createWebhookHandler(
     {
       users: {
-        fetch: async (id: string) => ({ send: async (text: string) => sent.push(`${id}:${text}`) }),
+        fetch: async (id: string) => ({
+          send: async (message: unknown) => sent.push({ id, message }),
+        }),
       },
     },
     "secret",
@@ -42,8 +44,24 @@ test("a valid signed Discord delivery sends a direct message to its envelope use
   );
 
   expect(response.status).toBe(204);
-  expect(sent).toEqual([expect.stringContaining("42:New offer listed!")]);
-  expect(sent[0]).toContain("7.25%");
+  expect(sent).toHaveLength(1);
+  expect(sent[0]?.id).toBe("42");
+  expect(sent[0]?.message).toEqual({
+    content: expect.stringContaining("New offer listed!"),
+    components: [
+      {
+        type: 1,
+        components: [
+          {
+            type: 2,
+            style: 5,
+            label: "View offer",
+            url: "https://offerbook.jup.ag/tokens/borrow?offerId=offer-address",
+          },
+        ],
+      },
+    ],
+  });
 });
 
 test("rejects an unsigned Discord delivery", async () => {

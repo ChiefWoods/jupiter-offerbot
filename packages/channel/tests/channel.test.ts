@@ -63,11 +63,12 @@ test("parses and renders a valid signed notification", async () => {
 
   expect("notification" in parsed).toBeTrue();
   if ("notification" in parsed)
-    expect(renderNotification(parsed.notification)).toBe(`New offer listed!
+    expect(renderNotification(parsed.notification)).toEqual({
+      message: `New offer listed!
 Mint: ${notification.mint} (SOL)
-APY: 7.25%
-Offer: ${notification.offerAddress}
-Transaction: ${notification.signature}`);
+APY: 7.25%`,
+      offerUrl: `https://offerbook.jup.ag/tokens/borrow?offerId=${notification.offerAddress}`,
+    });
 });
 
 test("rejects an unsigned notification before delivery", async () => {

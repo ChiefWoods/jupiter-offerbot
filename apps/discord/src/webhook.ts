@@ -2,7 +2,15 @@ import { parseNotificationRequest, renderNotification } from "@jupiter-offerbot/
 
 type DiscordMessenger = {
   users: {
-    fetch(userId: string): Promise<{ send(message: string): Promise<unknown> }>;
+    fetch(userId: string): Promise<{
+      send(message: {
+        content: string;
+        components: Array<{
+          type: 1;
+          components: Array<{ type: 2; style: 5; label: string; url: string }>;
+        }>;
+      }): Promise<unknown>;
+    }>;
   };
 };
 
@@ -26,7 +34,16 @@ export function createWebhookHandler(
 
     try {
       const user = await messenger.users.fetch(parsed.notification.userId);
-      await user.send(renderNotification(parsed.notification));
+      const rendered = renderNotification(parsed.notification);
+      await user.send({
+        content: rendered.message,
+        components: [
+          {
+            type: 1,
+            components: [{ type: 2, style: 5, label: "View offer", url: rendered.offerUrl }],
+          },
+        ],
+      });
       return new Response(null, { status: 204 });
     } catch (error) {
       return new Response(

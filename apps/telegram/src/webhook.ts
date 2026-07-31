@@ -7,10 +7,10 @@ export function createWebhookHandler(messenger: Api, secret: string, now: () => 
     if ("response" in parsed) return parsed.response;
 
     try {
-      await messenger.sendMessage(
-        parsed.notification.userId,
-        renderNotification(parsed.notification),
-      );
+      const rendered = renderNotification(parsed.notification);
+      await messenger.sendMessage(parsed.notification.userId, rendered.message, {
+        reply_markup: { inline_keyboard: [[{ text: "View offer", url: rendered.offerUrl }]] },
+      });
       return new Response(null, { status: 204 });
     } catch {
       return new Response("Telegram delivery failed", { status: 502 });
