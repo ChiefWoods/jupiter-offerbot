@@ -13,7 +13,7 @@ export function createOutboxWorker(
   options: OutboxOptions,
 ) {
   return {
-    async runOnce() {
+    async processPendingJobs() {
       const jobs = await notificationJobs.claimPending();
       for (const job of jobs) {
         const endpoint = options.endpoints[job.subscription.platform];

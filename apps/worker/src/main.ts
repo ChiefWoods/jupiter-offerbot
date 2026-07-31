@@ -20,7 +20,7 @@ function poll() {
   }
 
   pollInFlight = worker
-    .runOnce()
+    .processPendingJobs()
     .then((processedJobs) => {
       if (processedJobs > 0) {
         logger.info("Outbox poll completed", { processedJobs });
