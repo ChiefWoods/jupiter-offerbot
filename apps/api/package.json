@@ -15,6 +15,7 @@
     "dev": "bun --watch run src/main.ts"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.0",
     "@jupiter-offerbot/prisma": "workspace:*",
     "@jupiter-offerbot/redis": "workspace:*",
     "@solana/kit": "^7.0.0",
