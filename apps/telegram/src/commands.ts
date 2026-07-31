@@ -39,6 +39,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
         
 Commands:
   \`/watch <mint> [max_apy]\` - Watch a mint at an optional APY ceiling
+  \`/update <mint> [max_apy]\` - Update a watched mint's APY ceiling
   \`/list\` - List your watched mints
   \`/unwatch <mint>\` - Stop watching a mint`,
       );
@@ -106,6 +107,40 @@ Commands:
           }
           return;
         }
+        await context.reply(apiMessage(error));
+      }
+    },
+    async update(context: CommandContext<Context>) {
+      const id = await requireDirectMessage(context);
+      if (!id) return;
+
+      const [mint, maxApyText, ...extra] = context.match.trim().split(/\s+/);
+
+      if (!mint || extra.length || !isAddress(mint)) {
+        await context.reply("Provide a valid Solana mint: /update <mint> [max_apy].");
+        return;
+      }
+
+      const maxApy = maxApyText === undefined ? null : parseDisplayApy(maxApyText);
+
+      if (maxApy === null && maxApyText !== undefined) {
+        await context.reply(
+          "APY must be a non-negative number with at most two decimal places, for example 7.25.",
+        );
+        return;
+      }
+
+      try {
+        const subscription = (await api.list(id)).find((item) => item.mint === mint);
+        if (!subscription) {
+          await context.reply("You are not watching that mint.");
+          return;
+        }
+        await api.update(subscription.id, maxApy);
+        await context.reply(
+          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+        );
+      } catch (error) {
         await context.reply(apiMessage(error));
       }
     },

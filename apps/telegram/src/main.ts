@@ -37,6 +37,7 @@ if (import.meta.main) {
     { command: "start", description: "Show Offerbot help" },
     { command: "list", description: "List your watched mints" },
     { command: "watch", description: "Watch a mint at an optional APY ceiling" },
+    { command: "update", description: "Update a watched mint's APY ceiling" },
     { command: "unwatch", description: "Stop watching a mint" },
   ]);
   void bot.start({ drop_pending_updates: true });

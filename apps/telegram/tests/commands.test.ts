@@ -106,3 +106,21 @@ test("/watch updates the APY when the mint is already watched", async () => {
   expect(updates).toEqual([{ id: "subscription-1", maxApy: 1175 }]);
   expect(replies).toEqual([`Updated ${SOL_MINT} to up to 11.75% APY.`]);
 });
+
+test("/update changes the APY of a watched mint", async () => {
+  const updates: Array<{ id: string; maxApy: number | null }> = [];
+  const commands = createCommandHandlers({
+    create: async () => {},
+    list: async () => [{ id: "subscription-1", mint: SOL_MINT, maxApy: 1100 }],
+    update: async (id, maxApy) => {
+      updates.push({ id, maxApy });
+    },
+    remove: async () => true,
+  });
+  const { ctx, replies } = context(`${SOL_MINT} 11.75`);
+
+  await commands.update(ctx);
+
+  expect(updates).toEqual([{ id: "subscription-1", maxApy: 1175 }]);
+  expect(replies).toEqual([`Updated ${SOL_MINT} to up to 11.75% APY.`]);
+});
