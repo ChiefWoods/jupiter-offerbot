@@ -48,6 +48,10 @@
         "zod": "^4.4.3",
       },
     },
+    "packages/common": {
+      "name": "@jupiter-offerbot/common",
+      "version": "0.0.0",
+    },
     "packages/logger": {
       "name": "@jupiter-offerbot/logger",
       "version": "0.0.1",
@@ -87,6 +91,8 @@
     "@electric-sql/pglite-tools": ["@electric-sql/pglite-tools@0.3.3", "", { "peerDependencies": { "@electric-sql/pglite": "0.4.3" } }, "sha512-AlzLJTRJ8+UFgK8CmxIpyIpJ0+YaFw02IiOSdYrqxwPXdSyeIShz8aa9Tq+tYFXdPwcaMp/Fc80mQZ1dkOQ/wg=="],
 
     "@jupiter-offerbot/api": ["@jupiter-offerbot/api@workspace:apps/api"],
+
+    "@jupiter-offerbot/common": ["@jupiter-offerbot/common@workspace:packages/common"],
 
     "@jupiter-offerbot/listener": ["@jupiter-offerbot/listener@workspace:apps/listener"],
 
