@@ -15,7 +15,7 @@ async function main() {
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));
 
-  await streamOfferbookEvents(submitOffer, controller.signal);
+  await streamOfferbookEvents((offer) => submitOffer(offer, logger), controller.signal, logger);
   logger.info("Listener stopped");
 }
 

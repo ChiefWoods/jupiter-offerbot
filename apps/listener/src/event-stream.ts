@@ -1,5 +1,5 @@
 import { getBase58Decoder } from "@solana/kit";
-import { createLogger, serializeError } from "@jupiter-offerbot/logger";
+import { serializeError, type Logger } from "@jupiter-offerbot/logger";
 import {
   CommitmentLevel,
   type SubscribeRequest,
@@ -17,7 +17,6 @@ import { grpcClient } from "./solana";
 
 const base58Decoder = getBase58Decoder();
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
-const logger = createLogger("listener");
 
 function getTransactionOfferAddresses(update: SubscribeUpdate): string[] {
   const transaction = update.transaction?.transaction?.transaction;
@@ -118,6 +117,7 @@ function createOfferbookSubscription(fromSlot?: bigint): SubscribeRequest {
 export async function streamOfferbookEvents(
   onOffer: (offer: OfferCreated) => Promise<void>,
   signal: AbortSignal,
+  logger: Logger,
 ): Promise<void> {
   let lastSubmittedSlot: bigint | undefined;
   let reconnectAttempt = 0;

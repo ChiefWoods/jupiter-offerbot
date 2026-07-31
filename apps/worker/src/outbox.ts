@@ -1,16 +1,16 @@
 import { signWebhook } from "@jupiter-offerbot/common";
-import { createLogger, serializeError } from "@jupiter-offerbot/logger";
+import { serializeError, type Logger } from "@jupiter-offerbot/logger";
 import type { NotificationJobRepository } from "@jupiter-offerbot/prisma";
 
 type OutboxOptions = {
   endpoints: Record<"discord" | "telegram", { url: string; secret: string }>;
 };
 const backoff = [10_000, 60_000, 300_000, 1_800_000, 7_200_000];
-const logger = createLogger("worker");
 
 export function createOutboxWorker(
   notificationJobs: NotificationJobRepository,
   options: OutboxOptions,
+  logger: Logger,
 ) {
   return {
     async processPendingJobs() {

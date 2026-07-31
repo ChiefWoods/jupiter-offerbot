@@ -5,12 +5,16 @@ import { createOutboxWorker } from "./outbox";
 
 const logger = createLogger("worker");
 const prisma = createPrismaClient({ databaseUrl: env.DATABASE_URL });
-const worker = createOutboxWorker(createNotificationJobRepository(prisma), {
-  endpoints: {
-    discord: { url: env.DISCORD_WEBHOOK_URL, secret: env.DISCORD_WEBHOOK_SECRET },
-    telegram: { url: env.TELEGRAM_WEBHOOK_URL, secret: env.TELEGRAM_WEBHOOK_SECRET },
+const worker = createOutboxWorker(
+  createNotificationJobRepository(prisma),
+  {
+    endpoints: {
+      discord: { url: env.DISCORD_WEBHOOK_URL, secret: env.DISCORD_WEBHOOK_SECRET },
+      telegram: { url: env.TELEGRAM_WEBHOOK_URL, secret: env.TELEGRAM_WEBHOOK_SECRET },
+    },
   },
-});
+  logger,
+);
 let pollInFlight: Promise<void> | undefined;
 let shuttingDown = false;
 
