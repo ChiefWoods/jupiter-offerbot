@@ -95,7 +95,7 @@ Commands:
       try {
         await api.create({ platform: "telegram", userId: id, mint, maxApy });
         await context.reply(
-          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
@@ -104,7 +104,7 @@ Commands:
             if (!subscription) throw error;
             await api.update(subscription.id, maxApy);
             await context.reply(
-              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
             );
           } catch (updateError) {
             await context.reply(apiMessage(updateError));
@@ -142,7 +142,7 @@ Commands:
         }
         await api.update(subscription.id, maxApy);
         await context.reply(
-          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         await context.reply(apiMessage(error));

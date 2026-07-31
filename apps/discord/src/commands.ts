@@ -99,7 +99,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
         await api.create({ platform: "discord", userId: interaction.user.id, mint, maxApy });
         await ephemeral(
           interaction,
-          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
@@ -111,7 +111,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
             await api.update(subscription.id, maxApy);
             await ephemeral(
               interaction,
-              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
             );
           } catch (updateError) {
             await ephemeral(interaction, apiMessage(updateError));
@@ -135,7 +135,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
         await api.update(subscription.id, maxApy);
         await ephemeral(
           interaction,
-          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         await ephemeral(interaction, apiMessage(error));
