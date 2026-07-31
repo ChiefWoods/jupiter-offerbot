@@ -23,7 +23,7 @@ if (import.meta.main) {
     .login(env.DISCORD_BOT_TOKEN)
     .catch((error) => console.error("Discord login failed", error));
   const server = Bun.serve({ port: env.PORT, fetch: app.fetch });
-  console.log(`Offerbot Discord bridge listening on http://localhost:${server.port}`);
+  console.log(`Offerbot Discord bridge listening on port ${server.port}`);
 
   const shutdown = () => {
     bot.destroy();

@@ -33,7 +33,7 @@ if (import.meta.main) {
     fetch: app.fetch,
   });
 
-  console.log(`Offerbot Telegram bridge listening on http://localhost:${server.port}`);
+  console.log(`Offerbot Telegram bridge listening on port ${server.port}`);
 
   const shutdown = () => {
     bot.stop();

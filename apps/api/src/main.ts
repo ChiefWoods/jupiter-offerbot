@@ -75,7 +75,7 @@ if (import.meta.main) {
     }),
   });
   const server = Bun.serve({ port: env.PORT, fetch: app.fetch });
-  console.log(`Offerbot API listening on http://localhost:${server.port}`);
+  console.log(`Offerbot API listening on port ${server.port}`);
 
   const shutdown = async () => {
     server.stop();
