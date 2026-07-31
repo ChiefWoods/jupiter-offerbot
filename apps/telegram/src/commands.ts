@@ -93,6 +93,19 @@ Commands:
           `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
         );
       } catch (error) {
+        if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
+          try {
+            const subscription = (await api.list(id)).find((item) => item.mint === mint);
+            if (!subscription) throw error;
+            await api.update(subscription.id, maxApy);
+            await context.reply(
+              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)}`} APY.`,
+            );
+          } catch (updateError) {
+            await context.reply(apiMessage(updateError));
+          }
+          return;
+        }
         await context.reply(apiMessage(error));
       }
     },

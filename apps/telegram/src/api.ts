@@ -17,6 +17,7 @@ export type Subscription = {
 export type SubscriptionApi = {
   create(input: CreateSubscriptionInput): Promise<void>;
   list(userId: string): Promise<Subscription[]>;
+  update(id: string, maxApy: number | null): Promise<void>;
   remove(id: string): Promise<boolean>;
 };
 
@@ -52,6 +53,13 @@ export function createSubscriptionApi(
       );
       await throwForError(response);
       return (await response.json()).subscriptions;
+    },
+    async update(id, maxApy) {
+      const response = await api.v1.subscriptions[":id"].$patch(
+        { param: { id }, json: { maxApy } },
+        { headers },
+      );
+      await throwForError(response);
     },
     async remove(id) {
       const response = await api.v1.subscriptions[":id"].$delete({ param: { id } }, { headers });
