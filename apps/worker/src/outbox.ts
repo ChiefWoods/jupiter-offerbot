@@ -1,6 +1,6 @@
+import { signWebhook } from "@jupiter-offerbot/common";
 import { createLogger, serializeError } from "@jupiter-offerbot/logger";
 import type { NotificationJobRepository } from "@jupiter-offerbot/prisma";
-import { signWebhook } from "./signatures";
 
 type OutboxOptions = {
   endpoints: Record<"discord" | "telegram", { url: string; secret: string }>;

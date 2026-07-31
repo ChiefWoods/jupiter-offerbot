@@ -11,6 +11,7 @@
     "dev": "bun --watch run src/main.ts"
   },
   "dependencies": {
+    "@jupiter-offerbot/common": "workspace:*",
     "@jupiter-offerbot/logger": "workspace:*",
     "@jupiter-offerbot/prisma": "workspace:*",
     "zod": "^4.4.3"
