@@ -1,0 +1,84 @@
+import { expect, test } from "bun:test";
+import { signWebhook } from "@jupiter-offerbot/common";
+import {
+  createChannelApp,
+  createSubscriptionApi,
+  formatApy,
+  parseDisplayApy,
+  parseNotificationRequest,
+  renderNotification,
+} from "../src";
+
+const notification = {
+  notificationId: "b5ac3a7c-63b9-40bd-8be2-0492db5f7e63",
+  subscriptionId: "e118f8a4-282c-4174-a88e-3d2e9ae92b7b",
+  userId: "42",
+  offerAddress: "offer-address",
+  mint: "So11111111111111111111111111111111111111112",
+  apy: 725,
+  signature: "transaction-signature",
+  listedAt: "2026-07-28T00:00:00.000Z",
+};
+
+test("converts APY display values to integer hundredths and back", () => {
+  expect(parseDisplayApy("7.25")).toBe(725);
+  expect(parseDisplayApy("7.256")).toBeNull();
+  expect(formatApy(725)).toBe("7.25%");
+});
+
+test("binds subscription list requests to the configured channel", async () => {
+  const requests: Request[] = [];
+  const send = (async (input: string | URL | Request, init?: RequestInit) => {
+    requests.push(
+      input instanceof Request ? new Request(input, init) : new Request(String(input), init),
+    );
+    return Response.json({ subscriptions: [] });
+  }) as unknown as typeof fetch;
+  const api = createSubscriptionApi("http://api.example", "secret", "discord", send);
+
+  await api.list("42");
+
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.url).toBe("http://api.example/v1/subscriptions?platform=discord&userId=42");
+  expect(requests[0]?.headers.get("authorization")).toBe("Bearer secret");
+});
+
+test("parses and renders a valid signed notification", async () => {
+  const now = 1_800_000_000_000;
+  const body = JSON.stringify(notification);
+  const timestamp = String(now / 1_000);
+  const parsed = await parseNotificationRequest(
+    new Request("http://bridge", {
+      method: "POST",
+      headers: {
+        "x-offerbot-timestamp": timestamp,
+        "x-offerbot-signature": await signWebhook("secret", timestamp, body),
+      },
+      body,
+    }),
+    "secret",
+    () => now,
+  );
+
+  expect("notification" in parsed).toBeTrue();
+  if ("notification" in parsed)
+    expect(renderNotification(parsed.notification)).toBe(`New offer listed!
+Mint: ${notification.mint}
+APY: 7.25%
+Offer: ${notification.offerAddress}
+Transaction: ${notification.signature}`);
+});
+
+test("rejects an unsigned notification before delivery", async () => {
+  const parsed = await parseNotificationRequest(new Request("http://bridge"), "secret");
+
+  expect("response" in parsed).toBeTrue();
+  if ("response" in parsed) expect(parsed.response.status).toBe(401);
+});
+
+test("exposes the standard health and not-found contracts", async () => {
+  const app = createChannelApp(async () => new Response(null, { status: 204 }), ["*"]);
+
+  expect(await (await app.request("/health")).json()).toEqual({ ok: true });
+  expect((await app.request("/missing")).status).toBe(404);
+});

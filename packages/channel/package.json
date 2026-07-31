@@ -1,0 +1,21 @@
+{
+  "name": "@jupiter-offerbot/channel",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint --fix",
+    "format": "oxfmt --write",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@jupiter-offerbot/api": "workspace:*",
+    "@jupiter-offerbot/common": "workspace:*",
+    "hono": "^4.11.9",
+    "zod": "^4.4.3"
+  }
+}

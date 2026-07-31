@@ -1,7 +1,11 @@
 import { isAddress } from "@solana/kit";
+import {
+  ApiClientError,
+  formatApy,
+  parseDisplayApy,
+  type SubscriptionApi,
+} from "@jupiter-offerbot/channel";
 import type { CommandContext, Context } from "grammy";
-import { formatApy, parseDisplayApy } from "./apy";
-import { ApiClientError, type SubscriptionApi } from "./api";
 
 function userId(context: CommandContext<Context>): string | null {
   if (context.chat?.type !== "private" || !context.from) return null;

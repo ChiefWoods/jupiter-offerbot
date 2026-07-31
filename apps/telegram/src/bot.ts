@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import type { SubscriptionApi } from "./api";
+import type { SubscriptionApi } from "@jupiter-offerbot/channel";
 import { createCommandHandlers } from "./commands";
 
 export function createBot(token: string, subscriptions: SubscriptionApi) {

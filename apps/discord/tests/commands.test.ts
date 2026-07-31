@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
+import { ApiClientError } from "@jupiter-offerbot/channel";
 import { MessageFlags } from "discord.js";
-import { ApiClientError } from "../src/api";
 import { createCommandHandlers } from "../src/commands";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";

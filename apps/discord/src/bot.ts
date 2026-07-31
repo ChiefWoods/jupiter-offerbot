@@ -6,7 +6,7 @@ import {
   InteractionContextType,
   SlashCommandBuilder,
 } from "discord.js";
-import type { SubscriptionApi } from "./api";
+import type { SubscriptionApi } from "@jupiter-offerbot/channel";
 import { createCommandHandlers } from "./commands";
 
 const slashCommands = [

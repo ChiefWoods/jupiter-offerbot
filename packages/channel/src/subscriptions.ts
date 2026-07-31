@@ -1,8 +1,10 @@
 import type { AppType } from "@jupiter-offerbot/api/rpc";
 import { hc } from "hono/client";
 
-type CreateSubscriptionInput = {
-  platform: "discord";
+export type ChannelPlatform = "discord" | "telegram";
+
+export type CreateSubscriptionInput = {
+  platform: ChannelPlatform;
   userId: string;
   mint: string;
   maxApy: number | null;
@@ -30,6 +32,7 @@ export class ApiClientError extends Error {
 export function createSubscriptionApi(
   baseUrl: string,
   token: string,
+  platform: ChannelPlatform,
   send: typeof fetch = fetch,
 ): SubscriptionApi {
   const api = hc<AppType>(baseUrl, { fetch: send });
@@ -49,7 +52,7 @@ export function createSubscriptionApi(
     },
     async list(userId) {
       const response = await api.v1.subscriptions.$get(
-        { query: { platform: "discord", userId } },
+        { query: { platform, userId } },
         { headers },
       );
       await throwForError(response);

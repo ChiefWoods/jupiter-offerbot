@@ -32,11 +32,9 @@
       "name": "@jupiter-offerbot/discord",
       "version": "0.0.0",
       "dependencies": {
-        "@jupiter-offerbot/api": "workspace:*",
-        "@jupiter-offerbot/common": "workspace:*",
+        "@jupiter-offerbot/channel": "workspace:*",
         "@solana/kit": "^7.0.0",
         "discord.js": "^14.25.1",
-        "hono": "^4.11.9",
         "zod": "^4.4.3",
       },
     },
@@ -56,11 +54,9 @@
       "name": "@jupiter-offerbot/telegram",
       "version": "0.0.0",
       "dependencies": {
-        "@jupiter-offerbot/api": "workspace:*",
-        "@jupiter-offerbot/common": "workspace:*",
+        "@jupiter-offerbot/channel": "workspace:*",
         "@solana/kit": "^7.0.0",
         "grammy": "^1.38.3",
-        "hono": "^4.11.9",
         "zod": "^4.4.3",
       },
     },
@@ -71,6 +67,16 @@
         "@jupiter-offerbot/common": "workspace:*",
         "@jupiter-offerbot/logger": "workspace:*",
         "@jupiter-offerbot/prisma": "workspace:*",
+        "zod": "^4.4.3",
+      },
+    },
+    "packages/channel": {
+      "name": "@jupiter-offerbot/channel",
+      "version": "0.0.0",
+      "dependencies": {
+        "@jupiter-offerbot/api": "workspace:*",
+        "@jupiter-offerbot/common": "workspace:*",
+        "hono": "^4.11.9",
         "zod": "^4.4.3",
       },
     },
@@ -133,6 +139,8 @@
     "@hono/zod-validator": ["@hono/zod-validator@0.9.0", "", { "peerDependencies": { "hono": ">=4.11.2", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-n0ZSXmCiHVIp4Y5wlOOyZCeTd/rsawA/qW1cipB8QOYKZ9N8Tk0nZUZCXho9cu374AN4JpDNKioNKBJ/W+LBug=="],
 
     "@jupiter-offerbot/api": ["@jupiter-offerbot/api@workspace:apps/api"],
+
+    "@jupiter-offerbot/channel": ["@jupiter-offerbot/channel@workspace:packages/channel"],
 
     "@jupiter-offerbot/common": ["@jupiter-offerbot/common@workspace:packages/common"],
 

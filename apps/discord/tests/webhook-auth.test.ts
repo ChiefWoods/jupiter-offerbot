@@ -41,7 +41,7 @@ test("a valid signed Discord delivery sends a direct message to its envelope use
   );
 
   expect(response.status).toBe(204);
-  expect(sent).toEqual([expect.stringContaining("42:Matched Offerbook offer")]);
+  expect(sent).toEqual([expect.stringContaining("42:New offer listed!")]);
   expect(sent[0]).toContain("7.25%");
 });
 

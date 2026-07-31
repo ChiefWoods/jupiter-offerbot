@@ -1,7 +1,11 @@
 import { isAddress } from "@solana/kit";
+import {
+  ApiClientError,
+  formatApy,
+  parseDisplayApy,
+  type SubscriptionApi,
+} from "@jupiter-offerbot/channel";
 import { MessageFlags } from "discord.js";
-import { formatApy, parseDisplayApy } from "./apy";
-import { ApiClientError, type SubscriptionApi } from "./api";
 
 type CommandInteraction = {
   user: { id: string };

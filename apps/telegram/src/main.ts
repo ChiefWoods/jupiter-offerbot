@@ -1,35 +1,21 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { logger } from "hono/logger";
-import { requestId } from "hono/request-id";
+import { createChannelApp } from "@jupiter-offerbot/channel";
+import { createSubscriptionApi } from "@jupiter-offerbot/channel";
 import type { Api } from "grammy";
-import { createSubscriptionApi } from "./api";
 import { createBot } from "./bot";
 import { createWebhookHandler } from "./webhook";
 import { env } from "./env";
 
 export function createApp(messenger: Api, webhookSecret: string, corsAllowedOrigin: string[]) {
   const notificationHandler = createWebhookHandler(messenger, webhookSecret);
-  return new Hono()
-    .use("*", cors({ origin: corsAllowedOrigin }))
-    .use(logger())
-    .use("*", requestId())
-    .get("/health", (c) => c.json({ ok: true }))
-    .post("/internal/notifications", (c) => notificationHandler(c.req.raw))
-    .notFound((c) => c.json({ error: { code: "NOT_FOUND", message: "Route not found." } }, 404))
-    .onError((_error, c) => {
-      return c.json(
-        {
-          error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred." },
-          meta: { requestId: c.get("requestId") },
-        },
-        500,
-      );
-    });
+  return createChannelApp(notificationHandler, corsAllowedOrigin);
 }
 
 if (import.meta.main) {
-  const subscriptions = createSubscriptionApi(env.API_BASE_URL, env.TELEGRAM_BRIDGE_TOKEN);
+  const subscriptions = createSubscriptionApi(
+    env.API_BASE_URL,
+    env.TELEGRAM_BRIDGE_TOKEN,
+    "telegram",
+  );
   const bot = createBot(env.TELEGRAM_BOT_TOKEN, subscriptions);
   const app = createApp(bot.api, env.TELEGRAM_WEBHOOK_SECRET, env.CORS_ALLOWED_ORIGIN);
 

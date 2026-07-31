@@ -12,11 +12,9 @@
     "dev": "bun --watch run src/main.ts"
   },
   "dependencies": {
-    "@jupiter-offerbot/api": "workspace:*",
-    "@jupiter-offerbot/common": "workspace:*",
+    "@jupiter-offerbot/channel": "workspace:*",
     "@solana/kit": "^7.0.0",
     "discord.js": "^14.25.1",
-    "hono": "^4.11.9",
     "zod": "^4.4.3"
   },
   "entry": "src/main.ts"
