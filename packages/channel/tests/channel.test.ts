@@ -15,6 +15,7 @@ const notification = {
   userId: "42",
   offerAddress: "offer-address",
   mint: "So11111111111111111111111111111111111111112",
+  symbol: "SOL",
   apy: 725,
   signature: "transaction-signature",
   listedAt: "2026-07-28T00:00:00.000Z",
@@ -63,7 +64,7 @@ test("parses and renders a valid signed notification", async () => {
   expect("notification" in parsed).toBeTrue();
   if ("notification" in parsed)
     expect(renderNotification(parsed.notification)).toBe(`New offer listed!
-Mint: ${notification.mint}
+Mint: ${notification.mint} (SOL)
 APY: 7.25%
 Offer: ${notification.offerAddress}
 Transaction: ${notification.signature}`);

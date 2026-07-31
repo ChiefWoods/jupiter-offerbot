@@ -8,6 +8,7 @@ export const NotificationSchema = z.object({
   userId: z.string().min(1),
   offerAddress: z.string().min(1),
   mint: z.string().min(1),
+  symbol: z.string().nullable(),
   apy: z.number().int(),
   signature: z.string().min(1),
   listedAt: z.iso.datetime(),
@@ -26,7 +27,7 @@ export function constantTimeEqual(left: string, right: string): boolean {
 export function renderNotification(notification: Notification): string {
   return [
     "New offer listed!",
-    `Mint: ${notification.mint}`,
+    `Mint: ${notification.mint}${notification.symbol ? ` (${notification.symbol})` : ""}`,
     `APY: ${formatApy(notification.apy)}`,
     `Offer: ${notification.offerAddress}`,
     `Transaction: ${notification.signature}`,

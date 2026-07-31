@@ -10,6 +10,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { env } from "./env";
+import { createJupiterClient } from "./jupiter";
 import { ApiError } from "./error";
 import { createRateLimitMiddleware, createRedisRateLimitStore } from "./rate-limit";
 import { createOffersRouter } from "./routes/offers";
@@ -61,10 +62,11 @@ export function createApp(dependencies: ApiDependencies) {
 
 if (import.meta.main) {
   const prisma = createPrismaClient({ databaseUrl: env.DATABASE_URL });
+  const jupiter = createJupiterClient(env.JUPITER_API_KEY, env.JUPITER_API_URL);
   const app = createApp({
     bridgeTokens: { discord: env.DISCORD_BRIDGE_TOKEN, telegram: env.TELEGRAM_BRIDGE_TOKEN },
     listenerToken: env.LISTENER_API_TOKEN,
-    subscriptions: createSubscriptionRepository(prisma, env.MAX_SUBSCRIPTIONS_PER_USER),
+    subscriptions: createSubscriptionRepository(prisma, env.MAX_SUBSCRIPTIONS_PER_USER, jupiter),
     offers: createOfferRepository(prisma),
     ready: () => prisma.$queryRaw`SELECT 1`,
     allowedOrigins: env.CORS_ALLOWED_ORIGINS,

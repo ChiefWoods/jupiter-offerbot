@@ -4,6 +4,8 @@ const positiveInteger = z.coerce.number().int().positive();
 
 const EnvSchema = z.object({
   DATABASE_URL: z.url(),
+  JUPITER_API_KEY: z.string().min(1),
+  JUPITER_API_URL: z.url(),
   LISTENER_API_TOKEN: z.string().min(1),
   DISCORD_BRIDGE_TOKEN: z.string().min(1),
   TELEGRAM_BRIDGE_TOKEN: z.string().min(1),

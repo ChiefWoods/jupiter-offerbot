@@ -36,6 +36,7 @@ export const NotificationEnvelopeSchema = z.object({
   userId: z.string().min(1),
   offerAddress: z.string().min(1),
   mint: z.string().min(1),
+  symbol: z.string().nullable(),
   apy: z.number().int(),
   signature: z.string().min(1),
   listedAt: z.iso.datetime(),

@@ -8,6 +8,7 @@ const notification = {
   userId: "42",
   offerAddress: "offer-address",
   mint: "So11111111111111111111111111111111111111112",
+  symbol: "SOL",
   apy: 725,
   signature: "transaction-signature",
   listedAt: "2026-07-28T00:00:00.000Z",

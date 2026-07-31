@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 import type { Api } from "grammy";
-import { createApp } from "../src/main";
+
+process.env.API_BASE_URL ??= "http://localhost:3000";
+process.env.TELEGRAM_BRIDGE_TOKEN ??= "telegram-bridge-token";
+process.env.TELEGRAM_WEBHOOK_SECRET ??= "telegram-webhook-secret";
+process.env.TELEGRAM_BOT_TOKEN ??= "telegram-bot-token";
+
+const { createApp } = await import("../src/main");
 
 test("the Telegram bridge exposes a health endpoint", async () => {
   const app = createApp({} as Api, "secret", ["*"]);

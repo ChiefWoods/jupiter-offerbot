@@ -60,6 +60,8 @@ export function createSubscriptionsRouter(
         try {
           return c.json({ subscription: await repository.create(input) }, 201);
         } catch (cause) {
+          if (cause instanceof Error && cause.message === "Mint metadata unavailable.")
+            throw new ApiError("MINT_METADATA_UNAVAILABLE");
           if (
             cause instanceof Error &&
             ["limit", "Subscription limit reached."].includes(cause.message)

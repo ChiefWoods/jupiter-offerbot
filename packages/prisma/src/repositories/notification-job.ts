@@ -27,7 +27,7 @@ export function createNotificationJobRepository(prisma: PrismaClient) {
         });
         return tx.notificationJob.findMany({
           where: { id: { in: ids } },
-          include: { subscription: true },
+          include: { subscription: true, mintMetadata: true },
         });
       });
     },

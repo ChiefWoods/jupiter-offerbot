@@ -23,6 +23,7 @@ export function createOutboxWorker(
           userId: job.subscription.userId,
           offerAddress: job.offerAddress,
           mint: job.mint,
+          symbol: job.mintMetadata.symbol,
           apy: job.apy,
           signature: job.signature,
           listedAt: job.listedAt.toISOString(),

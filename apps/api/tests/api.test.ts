@@ -3,6 +3,8 @@ import type { SubscriptionRecord } from "@jupiter-offerbot/prisma";
 import type { ApiDependencies } from "../src/main";
 
 process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/offerbot_test";
+process.env.JUPITER_API_KEY ??= "jupiter-key";
+process.env.JUPITER_API_URL ??= "https://api.jup.ag/tokens/v2";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
 process.env.DISCORD_BRIDGE_TOKEN ??= "discord-token";
 process.env.TELEGRAM_BRIDGE_TOKEN ??= "telegram-token";
@@ -43,6 +45,7 @@ function dependencies(): ApiDependencies {
           ...input,
           createdAt: new Date(),
           updatedAt: new Date(),
+          symbol: null,
         };
         subscriptions.push(subscription);
         return subscription;
@@ -111,7 +114,7 @@ test("creates and lists a bridge platform user's subscriptions", async () => {
     ).status,
   ).toBe(201);
   const response = await api("/v1/subscriptions?platform=discord&userId=42");
-  expect(await response.json()).toMatchObject({ subscriptions: [{ maxApy: 700 }] });
+  expect(await response.json()).toMatchObject({ subscriptions: [{ maxApy: 700, symbol: null }] });
 });
 
 test("rejects a bridge attempting to manage another platform", async () => {

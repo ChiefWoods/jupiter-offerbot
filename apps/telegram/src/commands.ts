@@ -2,6 +2,7 @@ import { isAddress } from "@solana/kit";
 import {
   ApiClientError,
   formatApy,
+  formatMint,
   parseDisplayApy,
   type SubscriptionApi,
 } from "@jupiter-offerbot/channel";
@@ -64,7 +65,7 @@ Commands:
           subscriptions
             .map(
               (subscription) =>
-                `${subscription.mint} — ${subscription.maxApy === null ? "any%" : "max " + formatApy(subscription.maxApy)}`,
+                `${formatMint(subscription.mint, subscription.symbol)} — ${subscription.maxApy === null ? "any%" : "max " + formatApy(subscription.maxApy)}`,
             )
             .join("\n\n"),
         );
@@ -93,9 +94,9 @@ Commands:
       }
 
       try {
-        await api.create({ platform: "telegram", userId: id, mint, maxApy });
+        const subscription = await api.create({ platform: "telegram", userId: id, mint, maxApy });
         await context.reply(
-          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `Watching ${formatMint(mint, subscription.symbol)} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
@@ -104,7 +105,7 @@ Commands:
             if (!subscription) throw error;
             await api.update(subscription.id, maxApy);
             await context.reply(
-              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+              `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
             );
           } catch (updateError) {
             await context.reply(apiMessage(updateError));
@@ -142,7 +143,7 @@ Commands:
         }
         await api.update(subscription.id, maxApy);
         await context.reply(
-          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         await context.reply(apiMessage(error));
@@ -170,7 +171,7 @@ Commands:
           await context.reply("There is no subscription for that mint to cancel.");
           return;
         }
-        await context.reply(`Stopped watching ${mint}.`);
+        await context.reply(`Stopped watching ${formatMint(mint, subscription.symbol)}.`);
       } catch (error) {
         await context.reply(apiMessage(error));
       }

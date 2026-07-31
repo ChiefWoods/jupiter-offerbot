@@ -13,15 +13,20 @@ export type CreateSubscriptionInput = {
 export type Subscription = {
   id: string;
   mint: string;
+  symbol: string | null;
   maxApy: number | null;
 };
 
 export type SubscriptionApi = {
-  create(input: CreateSubscriptionInput): Promise<void>;
+  create(input: CreateSubscriptionInput): Promise<Subscription>;
   list(userId: string): Promise<Subscription[]>;
   update(id: string, maxApy: number | null): Promise<void>;
   remove(id: string): Promise<boolean>;
 };
+
+export function formatMint(mint: string, symbol: string | null): string {
+  return `${mint}${symbol ? ` (${symbol})` : ""}`;
+}
 
 export class ApiClientError extends Error {
   constructor(readonly code: string) {
@@ -49,6 +54,7 @@ export function createSubscriptionApi(
     async create(input) {
       const response = await api.v1.subscriptions.$post({ json: input }, { headers });
       await throwForError(response);
+      return (await response.json()).subscription;
     },
     async list(userId) {
       const response = await api.v1.subscriptions.$get(

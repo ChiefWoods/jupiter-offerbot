@@ -10,6 +10,7 @@ export {
 export {
   ApiClientError,
   createSubscriptionApi,
+  formatMint,
   type ChannelPlatform,
   type CreateSubscriptionInput,
   type Subscription,

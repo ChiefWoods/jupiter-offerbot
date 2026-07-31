@@ -2,6 +2,7 @@ import { isAddress } from "@solana/kit";
 import {
   ApiClientError,
   formatApy,
+  formatMint,
   parseDisplayApy,
   type SubscriptionApi,
 } from "@jupiter-offerbot/channel";
@@ -84,7 +85,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
           subscriptions
             .map(
               (subscription) =>
-                `${subscription.mint} — ${subscription.maxApy === null ? "any%" : `max ${formatApy(subscription.maxApy)}`}`,
+                `${formatMint(subscription.mint, subscription.symbol)} — ${subscription.maxApy === null ? "any%" : `max ${formatApy(subscription.maxApy)}`}`,
             )
             .join("\n\n"),
         );
@@ -96,10 +97,15 @@ export function createCommandHandlers(api: SubscriptionApi) {
       const maxApy = await validate(interaction, mint, maxApyText);
       if (maxApy === undefined) return;
       try {
-        await api.create({ platform: "discord", userId: interaction.user.id, mint, maxApy });
+        const subscription = await api.create({
+          platform: "discord",
+          userId: interaction.user.id,
+          mint,
+          maxApy,
+        });
         await ephemeral(
           interaction,
-          `Watching ${mint} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `Watching ${formatMint(mint, subscription.symbol)} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
@@ -111,7 +117,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
             await api.update(subscription.id, maxApy);
             await ephemeral(
               interaction,
-              `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+              `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
             );
           } catch (updateError) {
             await ephemeral(interaction, apiMessage(updateError));
@@ -135,7 +141,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
         await api.update(subscription.id, maxApy);
         await ephemeral(
           interaction,
-          `Updated ${mint} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         await ephemeral(interaction, apiMessage(error));
@@ -154,7 +160,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
           await ephemeral(interaction, "There is no subscription for that mint to cancel.");
           return;
         }
-        await ephemeral(interaction, `Stopped watching ${mint}.`);
+        await ephemeral(interaction, `Stopped watching ${formatMint(mint, subscription.symbol)}.`);
       } catch (error) {
         await ephemeral(interaction, apiMessage(error));
       }

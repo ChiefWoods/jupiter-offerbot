@@ -28,9 +28,19 @@ model Subscription {
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   notificationJobs NotificationJob[]
+  mintMetadata     Mint             @relation(fields: [mint], references: [mint])
 
   @@unique([platform, userId, mint])
   @@map("subscriptions")
+}
+
+model Mint {
+  mint             String           @id
+  symbol           String?
+  subscriptions    Subscription[]
+  notificationJobs NotificationJob[]
+
+  @@map("mints")
 }
 
 model NotificationJob {
@@ -47,6 +57,7 @@ model NotificationJob {
   lastError      String?               @map("last_error")
   deliveredAt    DateTime?             @map("delivered_at") @db.Timestamptz(6)
   subscription   Subscription          @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  mintMetadata   Mint                  @relation(fields: [mint], references: [mint])
 
   @@unique([subscriptionId, offerAddress])
   @@index([status, availableAt], map: "notification_jobs_ready_idx")
