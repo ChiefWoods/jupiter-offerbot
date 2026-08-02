@@ -9,6 +9,7 @@ export type RateLimitResult = {
 };
 
 export type RateLimitStore = {
+  ready(): Promise<void>;
   increment(key: string, windowSeconds: number): Promise<RateLimitResult>;
 };
 
@@ -60,6 +61,7 @@ export function createRedisRateLimitStore(redisUrl: string): RateLimitStore {
   }
 
   return {
+    ready: connect,
     async increment(key, windowSeconds) {
       await connect();
 

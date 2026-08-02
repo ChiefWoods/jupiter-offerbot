@@ -26,6 +26,15 @@ export type ApiDependencies = {
   rateLimit: MiddlewareHandler;
 };
 
+export function createReadinessCheck(
+  postgres: () => Promise<unknown>,
+  redis: () => Promise<unknown>,
+): () => Promise<void> {
+  return async () => {
+    await Promise.all([postgres(), redis()]);
+  };
+}
+
 export function createApp(dependencies: ApiDependencies) {
   return new Hono()
     .use("*", cors({ origin: dependencies.allowedOrigins }))
@@ -63,14 +72,18 @@ export function createApp(dependencies: ApiDependencies) {
 if (import.meta.main) {
   const prisma = createPrismaClient({ databaseUrl: env.DATABASE_URL });
   const jupiter = createJupiterClient(env.JUPITER_API_KEY, env.JUPITER_API_URL);
+  const rateLimitStore = createRedisRateLimitStore(env.REDIS_URL);
   const app = createApp({
     bridgeTokens: { discord: env.DISCORD_BRIDGE_TOKEN, telegram: env.TELEGRAM_BRIDGE_TOKEN },
     listenerToken: env.LISTENER_API_TOKEN,
     subscriptions: createSubscriptionRepository(prisma, env.MAX_SUBSCRIPTIONS_PER_USER, jupiter),
     offers: createOfferRepository(prisma),
-    ready: () => prisma.$queryRaw`SELECT 1`,
+    ready: createReadinessCheck(
+      () => prisma.$queryRaw`SELECT 1`,
+      () => rateLimitStore.ready(),
+    ),
     allowedOrigins: env.CORS_ALLOWED_ORIGINS,
-    rateLimit: createRateLimitMiddleware(createRedisRateLimitStore(env.REDIS_URL), {
+    rateLimit: createRateLimitMiddleware(rateLimitStore, {
       maxRequests: env.RATE_LIMIT_MAX_REQUESTS,
       windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS,
       trustedHeaderName: env.RATE_LIMIT_TRUSTED_IP_HEADER,

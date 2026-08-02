@@ -11,7 +11,7 @@ process.env.TELEGRAM_BRIDGE_TOKEN ??= "telegram-token";
 process.env.MAX_SUBSCRIPTIONS_PER_USER ??= "2";
 process.env.REDIS_URL ??= "redis://localhost:6379";
 
-const { createApp } = await import("../src/main");
+const { createApp, createReadinessCheck } = await import("../src/main");
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -101,6 +101,33 @@ function request(app: ReturnType<typeof createApp>, platform = "discord") {
       },
     });
 }
+
+test("readiness waits for both Postgres and Redis", async () => {
+  const checks: string[] = [];
+  const ready = createReadinessCheck(
+    async () => {
+      checks.push("postgres");
+    },
+    async () => {
+      checks.push("redis");
+    },
+  );
+
+  await ready();
+
+  expect(checks.sort()).toEqual(["postgres", "redis"]);
+});
+
+test("readiness fails when Redis is unavailable", async () => {
+  const ready = createReadinessCheck(
+    async () => undefined,
+    async () => {
+      throw new Error("Redis unavailable");
+    },
+  );
+
+  await expect(ready()).rejects.toThrow("Redis unavailable");
+});
 
 test("creates and lists a bridge platform user's subscriptions", async () => {
   const app = createApp(dependencies());
