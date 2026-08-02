@@ -21,6 +21,16 @@ const notification = {
   listedAt: "2026-07-28T00:00:00.000Z",
 };
 
+async function withMockedFetch<T>(send: typeof fetch, callback: () => Promise<T>): Promise<T> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = send;
+  try {
+    return await callback();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
 test("converts APY display values to integer hundredths and back", () => {
   expect(parseDisplayApy("7.25")).toBe(725);
   expect(parseDisplayApy("7.256")).toBeNull();
@@ -35,13 +45,30 @@ test("binds subscription list requests to the configured channel", async () => {
     );
     return Response.json({ subscriptions: [] });
   }) as unknown as typeof fetch;
-  const api = createSubscriptionApi("http://api.example", "secret", "discord", send);
-
-  await api.list("42");
+  await withMockedFetch(send, async () => {
+    const api = createSubscriptionApi("http://api.example", "secret", "discord");
+    await api.list("42");
+  });
 
   expect(requests).toHaveLength(1);
   expect(requests[0]?.url).toBe("http://api.example/v1/subscriptions?platform=discord&userId=42");
   expect(requests[0]?.headers.get("authorization")).toBe("Bearer secret");
+});
+
+test("retries a transient subscription-service failure", async () => {
+  let attempts = 0;
+  const send = (async () => {
+    attempts++;
+    return attempts === 1
+      ? new Response(null, { status: 503 })
+      : Response.json({ subscriptions: [] });
+  }) as unknown as typeof fetch;
+  await withMockedFetch(send, async () => {
+    const api = createSubscriptionApi("http://api.example", "secret", "telegram");
+    await expect(api.list("42")).resolves.toEqual([]);
+  });
+
+  expect(attempts).toBe(2);
 });
 
 test("parses and renders a valid signed notification", async () => {

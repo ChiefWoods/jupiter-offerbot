@@ -1,5 +1,6 @@
+import { betterFetch } from "@better-fetch/fetch";
 import type { AppType } from "@jupiter-offerbot/api/rpc";
-import { hc } from "hono/client";
+import type { hc, InferResponseType } from "hono/client";
 
 export type ChannelPlatform = "discord" | "telegram";
 
@@ -24,6 +25,10 @@ export type SubscriptionApi = {
   remove(id: string): Promise<boolean>;
 };
 
+type ApiClient = ReturnType<typeof hc<AppType>>;
+type CreateSubscriptionResponse = InferResponseType<ApiClient["v1"]["subscriptions"]["$post"], 201>;
+type ListSubscriptionsResponse = InferResponseType<ApiClient["v1"]["subscriptions"]["$get"]>;
+
 export function formatMint(mint: string, symbol: string | null): string {
   return `${mint}${symbol ? ` (${symbol})` : ""}`;
 }
@@ -38,43 +43,53 @@ export function createSubscriptionApi(
   baseUrl: string,
   token: string,
   platform: ChannelPlatform,
-  send: typeof fetch = fetch,
 ): SubscriptionApi {
-  const api = hc<AppType>(baseUrl, { fetch: send });
-  const headers = { authorization: `Bearer ${token}` };
-  const throwForError = async (response: { ok: boolean; json(): Promise<unknown> }) => {
-    if (response.ok) return;
-    const body = (await response.json().catch(() => undefined)) as
-      | { error?: { code?: string } }
-      | undefined;
-    throw new ApiClientError(body?.error?.code ?? "REQUEST_FAILED");
+  const request = async <T>(
+    path: string,
+    options: { method: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown; query?: unknown },
+  ): Promise<T> => {
+    const { data, error } = await betterFetch<T, { error?: { code?: string } }>(path, {
+      baseURL: baseUrl,
+      auth: { type: "Bearer", token },
+      ...options,
+      retry: {
+        type: "exponential",
+        attempts: 5,
+        baseDelay: 500,
+        maxDelay: 4_000,
+        shouldRetry: (response) => response !== null && [502, 503, 504].includes(response.status),
+      },
+    });
+
+    if (error) {
+      throw new ApiClientError(error.error?.code ?? "REQUEST_FAILED");
+    }
+    return data;
   };
 
   return {
     async create(input) {
-      const response = await api.v1.subscriptions.$post({ json: input }, { headers });
-      await throwForError(response);
-      return (await response.json()).subscription;
+      return (
+        await request<CreateSubscriptionResponse>("/v1/subscriptions", {
+          method: "POST",
+          body: input,
+        })
+      ).subscription;
     },
     async list(userId) {
-      const response = await api.v1.subscriptions.$get(
-        { query: { platform, userId } },
-        { headers },
-      );
-      await throwForError(response);
-      return (await response.json()).subscriptions;
+      return (
+        await request<ListSubscriptionsResponse>("/v1/subscriptions", {
+          method: "GET",
+          query: { platform, userId },
+        })
+      ).subscriptions;
     },
     async update(id, maxApy) {
-      const response = await api.v1.subscriptions[":id"].$patch(
-        { param: { id }, json: { maxApy } },
-        { headers },
-      );
-      await throwForError(response);
+      await request(`/v1/subscriptions/${id}`, { method: "PATCH", body: { maxApy } });
     },
     async remove(id) {
-      const response = await api.v1.subscriptions[":id"].$delete({ param: { id } }, { headers });
-      await throwForError(response);
-      return response.status === 204;
+      await request(`/v1/subscriptions/${id}`, { method: "DELETE" });
+      return true;
     },
   };
 }
