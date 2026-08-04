@@ -14,6 +14,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@jupiter-offerbot/api": "workspace:*",
     "@jupiter-offerbot/logger": "workspace:*",
     "@solana/kit": "^7.0.0",
     "@triton-one/yellowstone-grpc": "^5.0.9",

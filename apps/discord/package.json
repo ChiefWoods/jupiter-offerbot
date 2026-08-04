@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@jupiter-offerbot/channel": "workspace:*",
+    "@jupiter-offerbot/common": "workspace:*",
     "@solana/kit": "^7.0.0",
     "discord.js": "^14.27.0",
     "zod": "^4.4.3"

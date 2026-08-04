@@ -33,6 +33,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@jupiter-offerbot/channel": "workspace:*",
+        "@jupiter-offerbot/common": "workspace:*",
         "@solana/kit": "^7.0.0",
         "discord.js": "^14.27.0",
         "zod": "^4.4.3",
@@ -42,6 +43,7 @@
       "name": "@jupiter-offerbot/listener",
       "version": "0.0.0",
       "dependencies": {
+        "@jupiter-offerbot/api": "workspace:*",
         "@jupiter-offerbot/logger": "workspace:*",
         "@solana/kit": "^7.0.0",
         "@triton-one/yellowstone-grpc": "^5.0.9",
@@ -55,6 +57,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@jupiter-offerbot/channel": "workspace:*",
+        "@jupiter-offerbot/common": "workspace:*",
         "@solana/kit": "^7.0.0",
         "grammy": "^1.45.1",
         "zod": "^4.4.3",
