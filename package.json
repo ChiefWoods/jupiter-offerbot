@@ -10,7 +10,9 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
+    "lint:check": "turbo lint:check",
     "format": "turbo format",
+    "format:check": "turbo format:check",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "prepare": "husky"
