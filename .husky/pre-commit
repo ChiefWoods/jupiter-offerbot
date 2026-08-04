@@ -1,1 +1,4 @@
+# Remove nested workspace node_modules so stale links don't mask missing deps
+find apps packages -type d -name node_modules -prune -exec rm -rf {} +
+
 bunx lint-staged --allow-empty
