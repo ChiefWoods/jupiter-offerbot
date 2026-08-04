@@ -7,7 +7,7 @@ import {
 } from "@triton-one/yellowstone-grpc";
 
 import {
-  decodeOfferbookEvent,
+  decodeOfferCreatedV1,
   isOfferCreationInstruction,
   normalizeOfferCreatedEvent,
   OFFERBOOK_PROGRAM_ADDRESS,
@@ -18,11 +18,11 @@ import { grpcClient } from "./solana";
 const base58Decoder = getBase58Decoder();
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
 
-function getTransactionOfferAddresses(update: SubscribeUpdate): string[] {
+function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, string> {
   const transaction = update.transaction?.transaction?.transaction;
   const message = transaction?.message;
   if (!message) {
-    return [];
+    return new Map();
   }
 
   const accountKeys = [
@@ -31,24 +31,24 @@ function getTransactionOfferAddresses(update: SubscribeUpdate): string[] {
     ...(update.transaction?.transaction?.meta?.loadedReadonlyAddresses ?? []),
   ].map((key) => base58Decoder.decode(key));
 
-  return message.instructions.flatMap((instruction) => {
-    const programAddress = accountKeys[instruction.programIdIndex];
-    const offerAccountIndex = instruction.accounts[3];
-    const offerAddress =
-      offerAccountIndex === undefined ? undefined : accountKeys[offerAccountIndex];
+  return new Map(
+    message.instructions.flatMap((instruction, index) => {
+      const programAddress = accountKeys[instruction.programIdIndex];
+      const offerAccountIndex = instruction.accounts[3];
+      const offerAddress =
+        offerAccountIndex === undefined ? undefined : accountKeys[offerAccountIndex];
 
-    return programAddress === OFFERBOOK_PROGRAM_ADDRESS &&
-      offerAddress !== undefined &&
-      isOfferCreationInstruction(instruction.data)
-      ? [offerAddress]
-      : [];
-  });
+      return programAddress === OFFERBOOK_PROGRAM_ADDRESS &&
+        offerAddress !== undefined &&
+        isOfferCreationInstruction(instruction.data)
+        ? [[index, offerAddress] as const]
+        : [];
+    }),
+  );
 }
 
-/** Extracts supported event logs and pairs them with their created offer PDA. */
-function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated[] {
+export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated[] {
   const transaction = update.transaction?.transaction;
-  const logs = transaction?.meta?.logMessages ?? [];
   const offerAddresses = getTransactionOfferAddresses(update);
   const signature = transaction ? base58Decoder.decode(transaction.signature) : undefined;
   const slot = Number(update.transaction?.slot);
@@ -57,33 +57,35 @@ function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated[] {
     return [];
   }
 
-  const events = logs.flatMap((log) => {
-    const match = /^Program data: (.+)$/.exec(log);
-    if (!match?.[1]) {
-      return [];
-    }
+  const accountKeys = [
+    ...(transaction?.transaction?.message?.accountKeys ?? []),
+    ...(transaction?.meta?.loadedWritableAddresses ?? []),
+    ...(transaction?.meta?.loadedReadonlyAddresses ?? []),
+  ].map((key) => base58Decoder.decode(key));
 
-    try {
-      const event = decodeOfferbookEvent(new Uint8Array(Buffer.from(match[1], "base64")));
-      return event ? [event] : [];
-    } catch {
-      return [];
-    }
-  });
-
-  return events.flatMap((event, index) => {
-    const offerAddress = offerAddresses[index];
+  return (transaction?.meta?.innerInstructions ?? []).flatMap((innerInstructions) => {
+    const offerAddress = offerAddresses.get(innerInstructions.index);
     if (!offerAddress) {
       return [];
     }
 
-    const normalized = normalizeOfferCreatedEvent({
-      event,
-      offerAddress,
-      signature,
-      slot,
+    return innerInstructions.instructions.flatMap((instruction) => {
+      if (accountKeys[instruction.programIdIndex] !== OFFERBOOK_PROGRAM_ADDRESS) {
+        return [];
+      }
+
+      try {
+        const event = decodeOfferCreatedV1(instruction.data);
+        if (!event) {
+          return [];
+        }
+
+        const normalized = normalizeOfferCreatedEvent({ event, offerAddress, signature, slot });
+        return normalized ? [normalized] : [];
+      } catch {
+        return [];
+      }
     });
-    return normalized ? [normalized] : [];
   });
 }
 
