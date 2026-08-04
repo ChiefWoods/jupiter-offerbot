@@ -27,6 +27,9 @@ const OFFER = address("BWMbSZjY4yaaCmMQFerGLKTnZzwRrhxpQp49A1wGge1S");
 const SIGNATURE =
   "524g5eVZxKgnLx3kY457o8ysV4xdBKxwnxiHWGEeQqVtwhrHiFZNLRScg9KcJR2NPartWnBHisZeVEM3tGdzmLd7";
 const base58Encoder = getBase58Encoder();
+const EVENT_CPI_DISCRIMINATOR = new Uint8Array([228, 69, 165, 46, 81, 203, 154, 29]);
+const B5OJR_EVENT_DATA =
+  "A2sWoaUuLzGmQwK1xrmqAzky85kA8dbJpLythKAj8SsqyYde6tGBmHPMhyyYRzri3DDJdSC81BHVFP3vyJzETdHxyotqRH5aKPKbPY1JKgugWau9gsmciWD1KAvvRjib4vvnMEPRf1EE9bhEKrwhcFpfRyyvzV2XXRTAngGtXdCEBvumgorcuppFwFaR8RpD4Ne6XzNifZbM4QTKXGDfxzNxyWxkGRupcZqYhfrPBBYvZLPUNR8U5VAkbwYPYq2cGimFbmPhg3BGDTMxGstqGARHj5X21UpKnL3XhRVUFSj5PV3UmfNwwxpV8zkT9LoMowsUmNyrR1QV6XwaJMwppjeGbqsAdDH4Mx9YNYd5bkuW1rcwavxWanF1y5YDGMfZ5ZVzXZAXGy6EPqzcP7uTDWQ6ZFoCQmaqWhc23WB1ggoQxUX6vykREGjoSSA838m";
 
 function eventData(): Uint8Array {
   const common: OfferEventV0Args = {
@@ -62,8 +65,12 @@ function eventData(): Uint8Array {
   return new Uint8Array([...discriminator, ...payload]);
 }
 
+function eventCpiData(): Uint8Array {
+  return new Uint8Array([...EVENT_CPI_DISCRIMINATOR, ...eventData()]);
+}
+
 test("normalizes OfferCreatedV1", () => {
-  const event = decodeOfferCreatedV1(eventData());
+  const event = decodeOfferCreatedV1(eventCpiData());
   expect(event).toBeDefined();
 
   expect(
@@ -85,6 +92,18 @@ test("normalizes OfferCreatedV1", () => {
 
 test("ignores unrelated event data", () => {
   expect(decodeOfferCreatedV1(new Uint8Array(16))).toBeUndefined();
+});
+
+test("does not require a specific CPI wrapper discriminator", () => {
+  expect(
+    decodeOfferCreatedV1(new Uint8Array([...new Uint8Array(8), ...eventData()])),
+  ).toBeDefined();
+});
+
+test("decodes the CPI event emitted for B5oJrPWm5thDRhDSEVr4WP4pzR7uZ3qNHHAp77Jmuof", () => {
+  expect(
+    decodeOfferCreatedV1(new Uint8Array(base58Encoder.encode(B5OJR_EVENT_DATA))),
+  ).toBeDefined();
 });
 
 test("only recognizes CreateTokenPrincipalOffer instructions", () => {
@@ -143,7 +162,7 @@ test("extracts an OfferCreatedV1 event emitted through an Offerbook inner instru
                 {
                   programIdIndex: 4,
                   accounts: new Uint8Array(),
-                  data: eventData(),
+                  data: eventCpiData(),
                 },
               ],
             },
