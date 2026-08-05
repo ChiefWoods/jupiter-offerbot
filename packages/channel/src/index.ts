@@ -1,5 +1,6 @@
 export { createChannelApp } from "./app";
 export { formatApy, parseDisplayApy } from "./apy";
+export { env, parseEnv, type Env } from "./env";
 export {
   constantTimeEqual,
   NotificationSchema,

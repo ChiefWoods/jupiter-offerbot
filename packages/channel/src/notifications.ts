@@ -1,8 +1,10 @@
 import { signWebhook } from "@jupiter-offerbot/common";
 import { z } from "zod";
 import { formatApy } from "./apy";
+import { env } from "./env";
 
-const OFFERBOOK_BASE_URL_BORROW = "https://offerbook.jup.ag/tokens/borrow";
+const OFFERBOOK_BASE_URL_BORROW = new URL("https://offerbook.jup.ag/tokens/borrow");
+if (env.REFERRAL_UUID) OFFERBOOK_BASE_URL_BORROW.searchParams.set("ref", env.REFERRAL_UUID);
 
 export const NotificationSchema = z.object({
   notificationId: z.uuid(),
@@ -30,13 +32,15 @@ export function renderNotification(notification: Notification): {
   message: string;
   offerUrl: string;
 } {
+  const offerUrl = new URL(OFFERBOOK_BASE_URL_BORROW);
+  offerUrl.searchParams.set("offerId", notification.offerAddress);
   return {
     message: [
       "New offer listed!",
       `Mint: ${notification.mint}${notification.symbol ? ` (${notification.symbol})` : ""}`,
       `APY: ${formatApy(notification.apy)}`,
     ].join("\n"),
-    offerUrl: `${OFFERBOOK_BASE_URL_BORROW}?offerId=${notification.offerAddress}`,
+    offerUrl: offerUrl.toString(),
   };
 }
 
