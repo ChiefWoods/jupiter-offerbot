@@ -1,9 +1,6 @@
-import { createSolanaRpc } from "@solana/kit";
 import Client from "@triton-one/yellowstone-grpc";
 
 import { env } from "./env";
-
-export const solanaRpc = createSolanaRpc(env.SOLANA_RPC_URL);
 
 export const grpcClient = new Client(
   env.GRPC_ENDPOINT,

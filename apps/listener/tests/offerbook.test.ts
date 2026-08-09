@@ -1,18 +1,19 @@
 import { expect, test } from "bun:test";
 import {
-  CREATE_TOKEN_COLLATERAL_OFFER_DISCRIMINATOR,
+  CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   getOfferEventV1Encoder,
   getOfferEventV2Encoder,
   OfferSide,
   OfferStatus,
   type OfferEventV0Args,
-} from "jupiter-sdk/offerbook/kit";
-import { address, getBase58Encoder } from "@solana/kit";
+} from "jupiter-sdk/offerbook/web3js";
 import type { SubscribeUpdate } from "@triton-one/yellowstone-grpc";
+import { Address } from "@solana/web3.js";
+import bs58 from "bs58";
 
 import { decodeOfferCreatedEvent, normalizeOfferCreatedEvent } from "../src/offerbook";
 import {
-  CREATE_TOKEN_PRINCIPAL_OFFER_DISCRIMINATOR,
+  CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   isOfferCreationInstruction,
 } from "../src/offerbook";
 
@@ -21,13 +22,12 @@ process.env.SOLANA_RPC_URL ??= "http://localhost:8899";
 process.env.API_BASE_URL ??= "http://localhost:3000";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
 
-const SOL_MINT = address("So11111111111111111111111111111111111111112");
-const TOKEN_PROGRAM = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-const CREATOR = address("11111111111111111111111111111111");
-const OFFER = address("BWMbSZjY4yaaCmMQFerGLKTnZzwRrhxpQp49A1wGge1S");
+const SOL_MINT = new Address("So11111111111111111111111111111111111111112");
+const TOKEN_PROGRAM = new Address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const CREATOR = new Address("11111111111111111111111111111111");
+const OFFER = new Address("BWMbSZjY4yaaCmMQFerGLKTnZzwRrhxpQp49A1wGge1S");
 const SIGNATURE =
   "524g5eVZxKgnLx3kY457o8ysV4xdBKxwnxiHWGEeQqVtwhrHiFZNLRScg9KcJR2NPartWnBHisZeVEM3tGdzmLd7";
-const base58Encoder = getBase58Encoder();
 const EVENT_CPI_DISCRIMINATOR = new Uint8Array([228, 69, 165, 46, 81, 203, 154, 29]);
 const OFFER_CREATED_V2_DISCRIMINATOR = new Uint8Array([107, 228, 58, 148, 11, 235, 232, 181]);
 const B5OJR_EVENT_DATA =
@@ -85,7 +85,7 @@ test("normalizes OfferCreatedV1", () => {
     }),
   ).toEqual({
     offerAddress: "fixture-offer-account-address",
-    mint: SOL_MINT,
+    mint: SOL_MINT.toBase58(),
     apy: 700,
     signature: "fixture-signature",
     slot: 123,
@@ -138,17 +138,19 @@ test("decodes the wire-compatible OfferCreatedV2 event", () => {
 });
 
 test("decodes the CPI event emitted for B5oJrPWm5thDRhDSEVr4WP4pzR7uZ3qNHHAp77Jmuof", () => {
-  expect(
-    decodeOfferCreatedEvent(new Uint8Array(base58Encoder.encode(B5OJR_EVENT_DATA))),
-  ).toBeDefined();
+  expect(decodeOfferCreatedEvent(new Uint8Array(bs58.decode(B5OJR_EVENT_DATA)))).toBeDefined();
 });
 
 test("only recognizes CreateTokenPrincipalOffer instructions", () => {
   expect(
-    isOfferCreationInstruction(new Uint8Array(CREATE_TOKEN_PRINCIPAL_OFFER_DISCRIMINATOR)),
+    isOfferCreationInstruction(
+      new Uint8Array(CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR),
+    ),
   ).toBe(true);
   expect(
-    isOfferCreationInstruction(new Uint8Array(CREATE_TOKEN_COLLATERAL_OFFER_DISCRIMINATOR)),
+    isOfferCreationInstruction(
+      new Uint8Array(CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR),
+    ),
   ).toBe(false);
 });
 
@@ -160,11 +162,11 @@ test("extracts an OfferCreatedV1 event emitted through an Offerbook inner instru
     transaction: {
       slot: "437033878",
       transaction: {
-        signature: new Uint8Array(base58Encoder.encode(SIGNATURE)),
+        signature: new Uint8Array(bs58.decode(SIGNATURE)),
         isVote: false,
         index: "0",
         transaction: {
-          signatures: [new Uint8Array(base58Encoder.encode(SIGNATURE))],
+          signatures: [new Uint8Array(bs58.decode(SIGNATURE))],
           message: {
             header: undefined,
             accountKeys: [
@@ -173,7 +175,7 @@ test("extracts an OfferCreatedV1 event emitted through an Offerbook inner instru
               CREATOR,
               OFFER,
               "offerbkFMvVfpQhL8ZQ5iromnjct5rz3r52B9ewu3ie",
-            ].map((key) => new Uint8Array(base58Encoder.encode(key))),
+            ].map((key) => new Uint8Array(bs58.decode(key.toString()))),
             recentBlockhash: new Uint8Array(),
             versioned: false,
             addressTableLookups: [],
@@ -220,8 +222,8 @@ test("extracts an OfferCreatedV1 event emitted through an Offerbook inner instru
 
   expect(extractOfferCreatedEvents(update)).toEqual([
     {
-      offerAddress: OFFER,
-      mint: SOL_MINT,
+      offerAddress: OFFER.toBase58(),
+      mint: SOL_MINT.toBase58(),
       apy: 700,
       signature: SIGNATURE,
       slot: 437033878,

@@ -1,15 +1,17 @@
 import {
-  CREATE_TOKEN_PRINCIPAL_OFFER_DISCRIMINATOR,
+  CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   getOfferEventV1Decoder,
   getOfferEventV2Decoder,
+  OFFER_CREATED_V1_DISCRIMINATOR,
+  OFFER_CREATED_V2_DISCRIMINATOR,
   OFFERBOOK_PROGRAM_ADDRESS,
   type OfferEventV1,
   type OfferEventV2,
-} from "jupiter-sdk/offerbook/kit";
+} from "jupiter-sdk/offerbook/web3js";
 import { z } from "zod";
 import { hasPrefix, isSameBytes } from "./utils";
 
-export { CREATE_TOKEN_PRINCIPAL_OFFER_DISCRIMINATOR, OFFERBOOK_PROGRAM_ADDRESS };
+export { CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR, OFFERBOOK_PROGRAM_ADDRESS };
 
 export const OfferCreatedSchema = z.object({
   offerAddress: z.string().min(1),
@@ -23,11 +25,9 @@ export const OfferCreatedSchema = z.object({
 export type OfferCreated = z.infer<typeof OfferCreatedSchema>;
 type OfferEvent = OfferEventV1 | OfferEventV2;
 const EVENT_CPI_WRAPPER_SIZE = 8;
-const OFFER_CREATED_V1_DISCRIMINATOR = new Uint8Array([113, 118, 59, 240, 159, 129, 104, 196]);
-const OFFER_CREATED_V2_DISCRIMINATOR = new Uint8Array([107, 228, 58, 148, 11, 235, 232, 181]);
 
 export function isOfferCreationInstruction(data: Uint8Array): boolean {
-  return isSameBytes(data.subarray(0, 8), CREATE_TOKEN_PRINCIPAL_OFFER_DISCRIMINATOR);
+  return isSameBytes(data.subarray(0, 8), CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR);
 }
 
 export function decodeOfferCreatedEvent(bytes: Uint8Array): OfferEvent | undefined {
@@ -67,7 +67,7 @@ export function normalizeOfferCreatedEvent(input: {
 
   return OfferCreatedSchema.parse({
     offerAddress: input.offerAddress,
-    mint: collateral.fields[0].mint,
+    mint: collateral.fields[0].mint.toBase58(),
     apy: input.event.apy,
     signature: input.signature,
     slot: input.slot,

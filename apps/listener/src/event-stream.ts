@@ -1,10 +1,10 @@
-import { getBase58Decoder } from "@solana/kit";
 import { serializeError, type Logger } from "@jupiter-offerbot/logger";
 import {
   CommitmentLevel,
   type SubscribeRequest,
   type SubscribeUpdate,
 } from "@triton-one/yellowstone-grpc";
+import bs58 from "bs58";
 
 import {
   decodeOfferCreatedEvent,
@@ -15,7 +15,6 @@ import {
 } from "./offerbook";
 import { grpcClient } from "./solana";
 
-const base58Decoder = getBase58Decoder();
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
 
 function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, string> {
@@ -29,7 +28,7 @@ function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, stri
     ...message.accountKeys,
     ...(update.transaction?.transaction?.meta?.loadedWritableAddresses ?? []),
     ...(update.transaction?.transaction?.meta?.loadedReadonlyAddresses ?? []),
-  ].map((key) => base58Decoder.decode(key));
+  ].map((key) => bs58.encode(key));
 
   return new Map(
     message.instructions.flatMap((instruction, index) => {
@@ -38,7 +37,7 @@ function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, stri
       const offerAddress =
         offerAccountIndex === undefined ? undefined : accountKeys[offerAccountIndex];
 
-      return programAddress === OFFERBOOK_PROGRAM_ADDRESS &&
+      return programAddress === OFFERBOOK_PROGRAM_ADDRESS.toBase58() &&
         offerAddress !== undefined &&
         isOfferCreationInstruction(instruction.data)
         ? [[index, offerAddress] as const]
@@ -50,7 +49,7 @@ function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, stri
 export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated[] {
   const transaction = update.transaction?.transaction;
   const offerAddresses = getTransactionOfferAddresses(update);
-  const signature = transaction ? base58Decoder.decode(transaction.signature) : undefined;
+  const signature = transaction ? bs58.encode(transaction.signature) : undefined;
   const slot = Number(update.transaction?.slot);
 
   if (!signature || !Number.isSafeInteger(slot) || slot < 0) {
@@ -61,7 +60,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
     ...(transaction?.transaction?.message?.accountKeys ?? []),
     ...(transaction?.meta?.loadedWritableAddresses ?? []),
     ...(transaction?.meta?.loadedReadonlyAddresses ?? []),
-  ].map((key) => base58Decoder.decode(key));
+  ].map((key) => bs58.encode(key));
 
   return (transaction?.meta?.innerInstructions ?? []).flatMap((innerInstructions) => {
     const offerAddress = offerAddresses.get(innerInstructions.index);
@@ -70,7 +69,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
     }
 
     return innerInstructions.instructions.flatMap((instruction) => {
-      if (accountKeys[instruction.programIdIndex] !== OFFERBOOK_PROGRAM_ADDRESS) {
+      if (accountKeys[instruction.programIdIndex] !== OFFERBOOK_PROGRAM_ADDRESS.toBase58()) {
         return [];
       }
 
@@ -97,7 +96,7 @@ function createOfferbookSubscription(fromSlot?: bigint): SubscribeRequest {
       offerbook: {
         vote: false,
         failed: false,
-        accountInclude: [OFFERBOOK_PROGRAM_ADDRESS],
+        accountInclude: [OFFERBOOK_PROGRAM_ADDRESS.toBase58()],
         accountExclude: [],
         accountRequired: [],
       },

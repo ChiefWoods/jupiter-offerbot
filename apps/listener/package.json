@@ -16,8 +16,9 @@
   "dependencies": {
     "@jupiter-offerbot/api": "workspace:*",
     "@jupiter-offerbot/logger": "workspace:*",
-    "@solana/kit": "^7.0.0",
+    "@solana/web3.js": "3.0.0-rc.2",
     "@triton-one/yellowstone-grpc": "^5.0.9",
+    "bs58": "^6.0.0",
     "hono": "^4.11.9",
     "jupiter-sdk": "0.2.1",
     "zod": "^4.4.3"
