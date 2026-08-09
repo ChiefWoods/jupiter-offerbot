@@ -7,7 +7,7 @@ import {
 } from "@triton-one/yellowstone-grpc";
 
 import {
-  decodeOfferCreatedV1,
+  decodeOfferCreatedEvent,
   isOfferCreationInstruction,
   normalizeOfferCreatedEvent,
   OFFERBOOK_PROGRAM_ADDRESS,
@@ -75,7 +75,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
       }
 
       try {
-        const event = decodeOfferCreatedV1(instruction.data);
+        const event = decodeOfferCreatedEvent(instruction.data);
         if (!event) {
           return [];
         }

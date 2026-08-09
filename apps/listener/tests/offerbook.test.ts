@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   CREATE_TOKEN_COLLATERAL_OFFER_DISCRIMINATOR,
   getOfferEventV1Encoder,
+  getOfferEventV2Encoder,
   OfferSide,
   OfferStatus,
   type OfferEventV0Args,
@@ -9,7 +10,7 @@ import {
 import { address, getBase58Encoder } from "@solana/kit";
 import type { SubscribeUpdate } from "@triton-one/yellowstone-grpc";
 
-import { decodeOfferCreatedV1, normalizeOfferCreatedEvent } from "../src/offerbook";
+import { decodeOfferCreatedEvent, normalizeOfferCreatedEvent } from "../src/offerbook";
 import {
   CREATE_TOKEN_PRINCIPAL_OFFER_DISCRIMINATOR,
   isOfferCreationInstruction,
@@ -28,10 +29,13 @@ const SIGNATURE =
   "524g5eVZxKgnLx3kY457o8ysV4xdBKxwnxiHWGEeQqVtwhrHiFZNLRScg9KcJR2NPartWnBHisZeVEM3tGdzmLd7";
 const base58Encoder = getBase58Encoder();
 const EVENT_CPI_DISCRIMINATOR = new Uint8Array([228, 69, 165, 46, 81, 203, 154, 29]);
+const OFFER_CREATED_V2_DISCRIMINATOR = new Uint8Array([107, 228, 58, 148, 11, 235, 232, 181]);
 const B5OJR_EVENT_DATA =
   "A2sWoaUuLzGmQwK1xrmqAzky85kA8dbJpLythKAj8SsqyYde6tGBmHPMhyyYRzri3DDJdSC81BHVFP3vyJzETdHxyotqRH5aKPKbPY1JKgugWau9gsmciWD1KAvvRjib4vvnMEPRf1EE9bhEKrwhcFpfRyyvzV2XXRTAngGtXdCEBvumgorcuppFwFaR8RpD4Ne6XzNifZbM4QTKXGDfxzNxyWxkGRupcZqYhfrPBBYvZLPUNR8U5VAkbwYPYq2cGimFbmPhg3BGDTMxGstqGARHj5X21UpKnL3XhRVUFSj5PV3UmfNwwxpV8zkT9LoMowsUmNyrR1QV6XwaJMwppjeGbqsAdDH4Mx9YNYd5bkuW1rcwavxWanF1y5YDGMfZ5ZVzXZAXGy6EPqzcP7uTDWQ6ZFoCQmaqWhc23WB1ggoQxUX6vykREGjoSSA838m";
 
-function eventData(): Uint8Array {
+function eventData(
+  discriminator = new Uint8Array([113, 118, 59, 240, 159, 129, 104, 196]),
+): Uint8Array {
   const common: OfferEventV0Args = {
     creator: CREATOR,
     side: OfferSide.Principal,
@@ -56,7 +60,6 @@ function eventData(): Uint8Array {
     allowPartialFill: 0,
     bump: 255,
   };
-  const discriminator = new Uint8Array([113, 118, 59, 240, 159, 129, 104, 196]);
   const payload = getOfferEventV1Encoder().encode({
     ...common,
     counteredOffer: CREATOR,
@@ -70,7 +73,7 @@ function eventCpiData(): Uint8Array {
 }
 
 test("normalizes OfferCreatedV1", () => {
-  const event = decodeOfferCreatedV1(eventCpiData());
+  const event = decodeOfferCreatedEvent(eventCpiData());
   expect(event).toBeDefined();
 
   expect(
@@ -91,18 +94,52 @@ test("normalizes OfferCreatedV1", () => {
 });
 
 test("ignores unrelated event data", () => {
-  expect(decodeOfferCreatedV1(new Uint8Array(16))).toBeUndefined();
+  expect(decodeOfferCreatedEvent(new Uint8Array(16))).toBeUndefined();
 });
 
 test("does not require a specific CPI wrapper discriminator", () => {
   expect(
-    decodeOfferCreatedV1(new Uint8Array([...new Uint8Array(8), ...eventData()])),
+    decodeOfferCreatedEvent(new Uint8Array([...new Uint8Array(8), ...eventData()])),
   ).toBeDefined();
+});
+
+test("decodes the wire-compatible OfferCreatedV2 event", () => {
+  const payload = getOfferEventV2Encoder().encode({
+    creator: CREATOR,
+    side: OfferSide.Principal,
+    status: OfferStatus.Active,
+    principal: { __kind: "None" },
+    collateral: {
+      __kind: "Token",
+      fields: [{ mint: SOL_MINT, tokenProgram: TOKEN_PROGRAM }],
+    },
+    filter: { __kind: "None" },
+    principalAmount: 1n,
+    remainingPrincipal: 1n,
+    collateralAmount: 1n,
+    remainingCollateral: 1n,
+    apy: 700,
+    duration: 1,
+    createdAt: 1_753_401_600n,
+    expiredAt: 0n,
+    updatedAt: 0n,
+    minFillAmount: 1n,
+    fillCounter: 0n,
+    allowPartialFill: 0,
+    bump: 255,
+    counteredOffer: CREATOR,
+    allowExtend: 1,
+  });
+  const event = decodeOfferCreatedEvent(
+    new Uint8Array([...EVENT_CPI_DISCRIMINATOR, ...OFFER_CREATED_V2_DISCRIMINATOR, ...payload]),
+  );
+
+  expect(event).toHaveProperty("allowExtend", 1);
 });
 
 test("decodes the CPI event emitted for B5oJrPWm5thDRhDSEVr4WP4pzR7uZ3qNHHAp77Jmuof", () => {
   expect(
-    decodeOfferCreatedV1(new Uint8Array(base58Encoder.encode(B5OJR_EVENT_DATA))),
+    decodeOfferCreatedEvent(new Uint8Array(base58Encoder.encode(B5OJR_EVENT_DATA))),
   ).toBeDefined();
 });
 
