@@ -16,6 +16,7 @@ const notification = {
   offerAddress: "offer-address",
   mint: "So11111111111111111111111111111111111111112",
   symbol: "SOL",
+  type: "borrow",
   apy: 725,
   signature: "transaction-signature",
   listedAt: "2026-07-28T00:00:00.000Z",
@@ -91,11 +92,22 @@ test("parses and renders a valid signed notification", async () => {
   expect("notification" in parsed).toBeTrue();
   if ("notification" in parsed)
     expect(renderNotification(parsed.notification)).toEqual({
-      message: `New offer listed!
-Mint: ${notification.mint} (SOL)
+      message: `New borrow offer
+
+SOL (So11…1112)
 APY: 7.25%`,
       offerUrl: `https://offerbook.jup.ag/tokens/borrow?offerId=${notification.offerAddress}`,
     });
+});
+
+test("renders lend notifications with the lend offerbook URL", () => {
+  expect(renderNotification({ ...notification, type: "lend" })).toEqual({
+    message: `New lend offer
+
+SOL (So11…1112)
+APY: 7.25%`,
+    offerUrl: `https://offerbook.jup.ag/tokens/lend?offerId=${notification.offerAddress}`,
+  });
 });
 
 test("rejects an unsigned notification before delivery", async () => {

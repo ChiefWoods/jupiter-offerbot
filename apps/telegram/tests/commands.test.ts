@@ -6,7 +6,13 @@ import { createCommandHandlers } from "../src/commands";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 function createdSubscription(input: CreateSubscriptionInput) {
-  return { id: "subscription-1", mint: input.mint, symbol: "SOL", maxApy: input.maxApy };
+  return {
+    id: "subscription-1",
+    mint: input.mint,
+    type: input.type,
+    symbol: "SOL",
+    maxApy: input.maxApy,
+  };
 }
 
 function context(text: string, chatType: "private" | "group" = "private") {
@@ -35,12 +41,14 @@ test("/watch converts a decimal APY to its canonical integer", async () => {
     update: async () => {},
     remove: async () => true,
   });
-  const { ctx, replies } = context(`${SOL_MINT} 7.25`);
+  const { ctx, replies } = context(`borrow ${SOL_MINT} 7.25`);
 
   await commands.watch(ctx);
 
-  expect(requests).toEqual([{ platform: "telegram", userId: "99", mint: SOL_MINT, maxApy: 725 }]);
-  expect(replies).toEqual([`Watching ${SOL_MINT} (SOL) at up to 7.25% APY.`]);
+  expect(requests).toEqual([
+    { platform: "telegram", userId: "99", mint: SOL_MINT, type: "borrow", maxApy: 725 },
+  ]);
+  expect(replies).toEqual(["Borrow-offer alerts enabled for SOL (So11…1112), up to 7.25% APY."]);
 });
 
 test("/watch omits an APY as an all-APY subscription", async () => {
@@ -54,18 +62,22 @@ test("/watch omits an APY as an all-APY subscription", async () => {
     update: async () => {},
     remove: async () => true,
   });
-  const { ctx, replies } = context(SOL_MINT);
+  const { ctx, replies } = context(`lend ${SOL_MINT}`);
 
   await commands.watch(ctx);
 
-  expect(requests).toEqual([{ platform: "telegram", userId: "99", mint: SOL_MINT, maxApy: null }]);
-  expect(replies).toEqual([`Watching ${SOL_MINT} (SOL) at any APY.`]);
+  expect(requests).toEqual([
+    { platform: "telegram", userId: "99", mint: SOL_MINT, type: "lend", maxApy: null },
+  ]);
+  expect(replies).toEqual(["Lend-offer alerts enabled for SOL (So11…1112), at any APY."]);
 });
 
 test("/list returns the user's watched mints", async () => {
   const commands = createCommandHandlers({
     create: async (input) => createdSubscription(input),
-    list: async () => [{ id: "subscription-1", mint: SOL_MINT, symbol: "SOL", maxApy: 725 }],
+    list: async () => [
+      { id: "subscription-1", mint: SOL_MINT, type: "borrow", symbol: "SOL", maxApy: 725 },
+    ],
     update: async () => {},
     remove: async () => true,
   });
@@ -73,7 +85,7 @@ test("/list returns the user's watched mints", async () => {
 
   await commands.list(ctx);
 
-  expect(replies).toEqual([`${SOL_MINT} (SOL) — max 7.25%`]);
+  expect(replies).toEqual([`${SOL_MINT} (SOL) (borrow) — max 7.25%`]);
 });
 
 test("commands reject group chats before calling the API", async () => {
@@ -85,6 +97,7 @@ test("commands reject group chats before calling the API", async () => {
         platform: "telegram",
         userId: "99",
         mint: SOL_MINT,
+        type: "borrow",
         maxApy: null,
       });
     },
@@ -92,7 +105,7 @@ test("commands reject group chats before calling the API", async () => {
     update: async () => {},
     remove: async () => true,
   });
-  const { ctx, replies } = context(SOL_MINT, "group");
+  const { ctx, replies } = context(`borrow ${SOL_MINT}`, "group");
 
   await commands.watch(ctx);
 
@@ -106,50 +119,56 @@ test("/watch updates the APY when the mint is already watched", async () => {
     create: async () => {
       throw new ApiClientError("SUBSCRIPTION_ALREADY_EXISTS");
     },
-    list: async () => [{ id: "subscription-1", mint: SOL_MINT, symbol: "SOL", maxApy: 1100 }],
+    list: async () => [
+      { id: "subscription-1", mint: SOL_MINT, type: "borrow", symbol: "SOL", maxApy: 1100 },
+    ],
     update: async (id, maxApy) => {
       updates.push({ id, maxApy });
     },
     remove: async () => true,
   });
-  const { ctx, replies } = context(`${SOL_MINT} 11.75`);
+  const { ctx, replies } = context(`borrow ${SOL_MINT} 11.75`);
 
   await commands.watch(ctx);
 
   expect(updates).toEqual([{ id: "subscription-1", maxApy: 1175 }]);
-  expect(replies).toEqual([`Updated ${SOL_MINT} (SOL) to up to 11.75% APY.`]);
+  expect(replies).toEqual(["Borrow-offer alert updated for SOL (So11…1112): up to 11.75% APY."]);
 });
 
 test("/update changes the APY of a watched mint", async () => {
   const updates: Array<{ id: string; maxApy: number | null }> = [];
   const commands = createCommandHandlers({
     create: async (input) => createdSubscription(input),
-    list: async () => [{ id: "subscription-1", mint: SOL_MINT, symbol: "SOL", maxApy: 1100 }],
+    list: async () => [
+      { id: "subscription-1", mint: SOL_MINT, type: "borrow", symbol: "SOL", maxApy: 1100 },
+    ],
     update: async (id, maxApy) => {
       updates.push({ id, maxApy });
     },
     remove: async () => true,
   });
-  const { ctx, replies } = context(`${SOL_MINT} 11.75`);
+  const { ctx, replies } = context(`borrow ${SOL_MINT} 11.75`);
 
   await commands.update(ctx);
 
   expect(updates).toEqual([{ id: "subscription-1", maxApy: 1175 }]);
-  expect(replies).toEqual([`Updated ${SOL_MINT} (SOL) to up to 11.75% APY.`]);
+  expect(replies).toEqual(["Borrow-offer alert updated for SOL (So11…1112): up to 11.75% APY."]);
 });
 
 test("/unwatch does not remove a subscription for a different mint", async () => {
   let removed = false;
   const commands = createCommandHandlers({
     create: async (input) => createdSubscription(input),
-    list: async () => [{ id: "subscription-1", mint: "other-mint", symbol: null, maxApy: null }],
+    list: async () => [
+      { id: "subscription-1", mint: "other-mint", type: "borrow", symbol: null, maxApy: null },
+    ],
     update: async () => {},
     remove: async () => {
       removed = true;
       return true;
     },
   });
-  const { ctx, replies } = context(SOL_MINT);
+  const { ctx, replies } = context(`borrow ${SOL_MINT}`);
 
   await commands.unwatch(ctx);
 

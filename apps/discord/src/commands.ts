@@ -3,8 +3,10 @@ import {
   ApiClientError,
   formatApy,
   formatMint,
+  formatSubscriptionAsset,
   parseDisplayApy,
   type SubscriptionApi,
+  type SubscriptionType,
 } from "@jupiter-offerbot/channel";
 import { MessageFlags } from "discord.js";
 
@@ -67,9 +69,9 @@ export function createCommandHandlers(api: SubscriptionApi) {
           "",
           "Commands:",
           "/list — list your watched mints",
-          "/watch mint:<base58> max_apy:<decimal optional> — add or update a watch",
-          "/update mint:<base58> max_apy:<decimal optional> — update a watch",
-          "/unwatch mint:<base58> — cancel a watch",
+          "/watch mint:<base58> type:<borrow|lend> max_apy:<decimal optional> — add or update a watch",
+          "/update mint:<base58> type:<borrow|lend> max_apy:<decimal optional> — update a watch",
+          "/unwatch mint:<base58> type:<borrow|lend> — cancel a watch",
         ].join("\n"),
       );
     },
@@ -85,7 +87,7 @@ export function createCommandHandlers(api: SubscriptionApi) {
           subscriptions
             .map(
               (subscription) =>
-                `${formatMint(subscription.mint, subscription.symbol)} — ${subscription.maxApy === null ? "any%" : `max ${formatApy(subscription.maxApy)}`}`,
+                `${formatMint(subscription.mint, subscription.symbol)} (${subscription.type}) — ${subscription.maxApy === null ? "any%" : `max ${formatApy(subscription.maxApy)}`}`,
             )
             .join("\n\n"),
         );
@@ -93,7 +95,12 @@ export function createCommandHandlers(api: SubscriptionApi) {
         await ephemeral(interaction, apiMessage(error));
       }
     },
-    async watch(interaction: CommandInteraction, mint: string, maxApyText: string | null) {
+    async watch(
+      interaction: CommandInteraction,
+      mint: string,
+      type: SubscriptionType,
+      maxApyText: string | null,
+    ) {
       const maxApy = await validate(interaction, mint, maxApyText);
       if (maxApy === undefined) return;
       try {
@@ -101,23 +108,24 @@ export function createCommandHandlers(api: SubscriptionApi) {
           platform: "discord",
           userId: interaction.user.id,
           mint,
+          type,
           maxApy,
         });
         await ephemeral(
           interaction,
-          `Watching ${formatMint(mint, subscription.symbol)} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `${type === "borrow" ? "Borrow" : "Lend"}-offer alerts enabled for ${formatSubscriptionAsset(mint, subscription.symbol)}, ${maxApy === null ? "at any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
           try {
             const subscription = (await api.list(interaction.user.id)).find(
-              (item) => item.mint === mint,
+              (item) => item.mint === mint && item.type === type,
             );
             if (!subscription) throw error;
             await api.update(subscription.id, maxApy);
             await ephemeral(
               interaction,
-              `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+              `${type === "borrow" ? "Borrow" : "Lend"}-offer alert updated for ${formatSubscriptionAsset(mint, subscription.symbol)}: ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
             );
           } catch (updateError) {
             await ephemeral(interaction, apiMessage(updateError));
@@ -127,12 +135,17 @@ export function createCommandHandlers(api: SubscriptionApi) {
         await ephemeral(interaction, apiMessage(error));
       }
     },
-    async update(interaction: CommandInteraction, mint: string, maxApyText: string | null) {
+    async update(
+      interaction: CommandInteraction,
+      mint: string,
+      type: SubscriptionType,
+      maxApyText: string | null,
+    ) {
       const maxApy = await validate(interaction, mint, maxApyText);
       if (maxApy === undefined) return;
       try {
         const subscription = (await api.list(interaction.user.id)).find(
-          (item) => item.mint === mint,
+          (item) => item.mint === mint && item.type === type,
         );
         if (!subscription) {
           await ephemeral(interaction, "You are not watching that mint.");
@@ -141,26 +154,29 @@ export function createCommandHandlers(api: SubscriptionApi) {
         await api.update(subscription.id, maxApy);
         await ephemeral(
           interaction,
-          `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `${type === "borrow" ? "Borrow" : "Lend"}-offer alert updated for ${formatSubscriptionAsset(mint, subscription.symbol)}: ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         await ephemeral(interaction, apiMessage(error));
       }
     },
-    async unwatch(interaction: CommandInteraction, mint: string) {
+    async unwatch(interaction: CommandInteraction, mint: string, type: SubscriptionType) {
       if (!isAddress(mint)) {
         await ephemeral(interaction, "Provide a valid Solana mint address.");
         return;
       }
       try {
         const subscription = (await api.list(interaction.user.id)).find(
-          (item) => item.mint === mint,
+          (item) => item.mint === mint && item.type === type,
         );
         if (!subscription || !(await api.remove(subscription.id))) {
           await ephemeral(interaction, "There is no subscription for that mint to cancel.");
           return;
         }
-        await ephemeral(interaction, `Stopped watching ${formatMint(mint, subscription.symbol)}.`);
+        await ephemeral(
+          interaction,
+          `${type === "borrow" ? "Borrow" : "Lend"}-offer alerts disabled for ${formatSubscriptionAsset(mint, subscription.symbol)}.`,
+        );
       } catch (error) {
         await ephemeral(interaction, apiMessage(error));
       }

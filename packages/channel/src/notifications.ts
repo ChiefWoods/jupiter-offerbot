@@ -2,9 +2,15 @@ import { signWebhook } from "@jupiter-offerbot/common";
 import { z } from "zod";
 import { formatApy } from "./apy";
 import { env } from "./env";
+import { formatSubscriptionAsset } from "./utils";
 
 const OFFERBOOK_BASE_URL_BORROW = new URL("https://offerbook.jup.ag/tokens/borrow");
-if (env.REFERRAL_UUID) OFFERBOOK_BASE_URL_BORROW.searchParams.set("ref", env.REFERRAL_UUID);
+const OFFERBOOK_BASE_URL_LEND = new URL("https://offerbook.jup.ag/tokens/lend");
+
+if (env.REFERRAL_UUID) {
+  OFFERBOOK_BASE_URL_BORROW.searchParams.set("ref", env.REFERRAL_UUID);
+  OFFERBOOK_BASE_URL_LEND.searchParams.set("ref", env.REFERRAL_UUID);
+}
 
 export const NotificationSchema = z.object({
   notificationId: z.uuid(),
@@ -13,6 +19,7 @@ export const NotificationSchema = z.object({
   offerAddress: z.string().min(1),
   mint: z.string().min(1),
   symbol: z.string().nullable(),
+  type: z.enum(["borrow", "lend"]),
   apy: z.number().int(),
   signature: z.string().min(1),
   listedAt: z.iso.datetime(),
@@ -32,12 +39,15 @@ export function renderNotification(notification: Notification): {
   message: string;
   offerUrl: string;
 } {
-  const offerUrl = new URL(OFFERBOOK_BASE_URL_BORROW);
+  const offerUrl = new URL(
+    notification.type === "borrow" ? OFFERBOOK_BASE_URL_BORROW : OFFERBOOK_BASE_URL_LEND,
+  );
   offerUrl.searchParams.set("offerId", notification.offerAddress);
   return {
     message: [
-      "New offer listed!",
-      `Mint: ${notification.mint}${notification.symbol ? ` (${notification.symbol})` : ""}`,
+      `New ${notification.type} offer`,
+      "",
+      formatSubscriptionAsset(notification.mint, notification.symbol),
       `APY: ${formatApy(notification.apy)}`,
     ].join("\n"),
     offerUrl: offerUrl.toString(),

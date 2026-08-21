@@ -19,6 +19,13 @@ const slashCommands = [
       option.setName("mint").setDescription("Solana mint").setRequired(true),
     )
     .addStringOption((option) =>
+      option
+        .setName("type")
+        .setDescription("Offer type")
+        .setRequired(true)
+        .addChoices({ name: "Borrow", value: "borrow" }, { name: "Lend", value: "lend" }),
+    )
+    .addStringOption((option) =>
       option.setName("max_apy").setDescription("Maximum APY, e.g. 7.25"),
     ),
   new SlashCommandBuilder()
@@ -28,6 +35,13 @@ const slashCommands = [
       option.setName("mint").setDescription("Solana mint").setRequired(true),
     )
     .addStringOption((option) =>
+      option
+        .setName("type")
+        .setDescription("Offer type")
+        .setRequired(true)
+        .addChoices({ name: "Borrow", value: "borrow" }, { name: "Lend", value: "lend" }),
+    )
+    .addStringOption((option) =>
       option.setName("max_apy").setDescription("Maximum APY, e.g. 7.25"),
     ),
   new SlashCommandBuilder()
@@ -35,6 +49,13 @@ const slashCommands = [
     .setDescription("Stop watching a mint")
     .addStringOption((option) =>
       option.setName("mint").setDescription("Solana mint").setRequired(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("type")
+        .setDescription("Offer type")
+        .setRequired(true)
+        .addChoices({ name: "Borrow", value: "borrow" }, { name: "Lend", value: "lend" }),
     ),
 ].map((command) =>
   command
@@ -75,6 +96,7 @@ async function handleCommand(
       await commands.watch(
         interaction,
         interaction.options.getString("mint", true),
+        interaction.options.getString("type", true) as "borrow" | "lend",
         interaction.options.getString("max_apy"),
       );
       break;
@@ -82,11 +104,16 @@ async function handleCommand(
       await commands.update(
         interaction,
         interaction.options.getString("mint", true),
+        interaction.options.getString("type", true) as "borrow" | "lend",
         interaction.options.getString("max_apy"),
       );
       break;
     case "unwatch":
-      await commands.unwatch(interaction, interaction.options.getString("mint", true));
+      await commands.unwatch(
+        interaction,
+        interaction.options.getString("mint", true),
+        interaction.options.getString("type", true) as "borrow" | "lend",
+      );
       break;
   }
 }

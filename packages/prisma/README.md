@@ -4,7 +4,7 @@ Shared PostgreSQL persistence boundary for Jupiter Offerbot. It exports `createP
 
 ## Data contract
 
-- `subscriptions` stores a bridge platform, user ID, mint, and optional maximum APY in hundredths of a percent.
+- `subscriptions` stores a bridge platform, user ID, mint, offer type (`borrow` or `lend`), and optional maximum APY in hundredths of a percent.
 - `notification_jobs` is an outbox of matched offers. A unique `(subscription_id, offer_address)` pair makes offer replay idempotent.
 - Pending jobs are claimed in a transaction with `FOR UPDATE SKIP LOCKED`, enabling safe concurrent worker replicas.
 

@@ -30,7 +30,8 @@ function dependencies(): ApiDependencies {
             (row) =>
               row.platform === input.platform &&
               row.userId === input.userId &&
-              row.mint === input.mint,
+              row.mint === input.mint &&
+              row.type === input.type,
           )
         )
           throw new Error("unique");
@@ -70,7 +71,9 @@ function dependencies(): ApiDependencies {
       async ingest(offer) {
         const recipients = subscriptions.filter(
           (row) =>
-            row.mint === offer.mint && (row.maxApy === null || (row.maxApy as number) >= offer.apy),
+            row.mint === offer.mint &&
+            row.type === offer.type &&
+            (row.maxApy === null || (row.maxApy as number) >= offer.apy),
         );
         let queued = 0;
         for (const subscription of recipients) {
@@ -136,19 +139,69 @@ test("creates and lists a bridge platform user's subscriptions", async () => {
     (
       await api("/v1/subscriptions", {
         method: "POST",
-        body: JSON.stringify({ platform: "discord", userId: "42", mint: SOL_MINT, maxApy: 700 }),
+        body: JSON.stringify({
+          platform: "discord",
+          userId: "42",
+          mint: SOL_MINT,
+          type: "borrow",
+          maxApy: 700,
+        }),
       })
     ).status,
   ).toBe(201);
   const response = await api("/v1/subscriptions?platform=discord&userId=42");
-  expect(await response.json()).toMatchObject({ subscriptions: [{ maxApy: 700, symbol: null }] });
+  expect(await response.json()).toMatchObject({
+    subscriptions: [{ type: "borrow", maxApy: 700, symbol: null }],
+  });
+});
+
+test("allows separate borrow and lend subscriptions for the same mint and matches only their type", async () => {
+  const app = createApp(dependencies());
+  const api = request(app);
+  for (const type of ["borrow", "lend"] as const) {
+    const response = await api("/v1/subscriptions", {
+      method: "POST",
+      body: JSON.stringify({
+        platform: "discord",
+        userId: "42",
+        mint: SOL_MINT,
+        type,
+        maxApy: null,
+      }),
+    });
+    expect(response.status).toBe(201);
+  }
+
+  const ingest = (type: "borrow" | "lend") =>
+    app.request("/v1/offers", {
+      method: "POST",
+      headers: { authorization: "Bearer listener-token", "content-type": "application/json" },
+      body: JSON.stringify({
+        offerAddress: `${type}-offer`,
+        mint: SOL_MINT,
+        type,
+        apy: 700,
+        signature: "signature",
+        slot: 1,
+        listedAt: "2026-07-28T00:00:00.000Z",
+      }),
+    });
+
+  expect(await (await ingest("borrow")).json()).toMatchObject({ queued: 1 });
+  expect(await (await ingest("lend")).json()).toMatchObject({ queued: 1 });
 });
 
 test("rejects a bridge attempting to manage another platform", async () => {
   const app = createApp(dependencies());
   const response = await request(app)("/v1/subscriptions", {
     method: "POST",
-    body: JSON.stringify({ platform: "telegram", userId: "42", mint: SOL_MINT, maxApy: null }),
+    body: JSON.stringify({
+      platform: "telegram",
+      userId: "42",
+      mint: SOL_MINT,
+      type: "borrow",
+      maxApy: null,
+    }),
   });
   expect(response.status).toBe(403);
 });
@@ -159,7 +212,13 @@ test("enforces the configured subscription limit", async () => {
   for (const mint of [SOL_MINT, "Es9vMFrzaCERmJfrF4H2FYD3LVdaPUFe1n2hCyjGwV58"])
     await api("/v1/subscriptions", {
       method: "POST",
-      body: JSON.stringify({ platform: "discord", userId: "42", mint, maxApy: null }),
+      body: JSON.stringify({
+        platform: "discord",
+        userId: "42",
+        mint,
+        type: "borrow",
+        maxApy: null,
+      }),
     });
   const response = await api("/v1/subscriptions", {
     method: "POST",
@@ -167,6 +226,7 @@ test("enforces the configured subscription limit", async () => {
       platform: "discord",
       userId: "42",
       mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      type: "borrow",
       maxApy: null,
     }),
   });
@@ -183,11 +243,12 @@ test("matches integer APY subscriptions and makes offer replay idempotent", asyn
   ] as const)
     await api("/v1/subscriptions", {
       method: "POST",
-      body: JSON.stringify({ platform: "discord", userId, mint: SOL_MINT, maxApy }),
+      body: JSON.stringify({ platform: "discord", userId, mint: SOL_MINT, type: "borrow", maxApy }),
     });
   const event = {
     offerAddress: "offer",
     mint: SOL_MINT,
+    type: "borrow",
     apy: 700,
     signature: "signature",
     slot: 1,
@@ -233,6 +294,7 @@ test("returns the standard unexpected-error response with a request ID", async (
     body: JSON.stringify({
       offerAddress: "offer",
       mint: SOL_MINT,
+      type: "borrow",
       apy: 700,
       signature: "sig",
       slot: 1,

@@ -8,7 +8,7 @@ import bs58 from "bs58";
 
 import {
   decodeOfferCreatedEvent,
-  isOfferCreationInstruction,
+  getOfferCreationType,
   normalizeOfferCreatedEvent,
   OFFERBOOK_PROGRAM_ADDRESS,
   type OfferCreated,
@@ -32,7 +32,13 @@ export function createPingRequest(id: number): SubscribeRequest {
   };
 }
 
-function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, string> {
+function getTransactionOfferAddresses(update: SubscribeUpdate): Map<
+  number,
+  {
+    offerAddress: string;
+    type: OfferCreated["type"];
+  }
+> {
   const transaction = update.transaction?.transaction?.transaction;
   const message = transaction?.message;
   if (!message) {
@@ -52,10 +58,11 @@ function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, stri
       const offerAddress =
         offerAccountIndex === undefined ? undefined : accountKeys[offerAccountIndex];
 
+      const type = getOfferCreationType(instruction.data);
       return programAddress === OFFERBOOK_PROGRAM_ADDRESS.toBase58() &&
         offerAddress !== undefined &&
-        isOfferCreationInstruction(instruction.data)
-        ? [[index, offerAddress] as const]
+        type !== undefined
+        ? [[index, { offerAddress, type }] as const]
         : [];
     }),
   );
@@ -78,8 +85,8 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
   ].map((key) => bs58.encode(key));
 
   return (transaction?.meta?.innerInstructions ?? []).flatMap((innerInstructions) => {
-    const offerAddress = offerAddresses.get(innerInstructions.index);
-    if (!offerAddress) {
+    const offer = offerAddresses.get(innerInstructions.index);
+    if (!offer) {
       return [];
     }
 
@@ -94,7 +101,13 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
           return [];
         }
 
-        const normalized = normalizeOfferCreatedEvent({ event, offerAddress, signature, slot });
+        const normalized = normalizeOfferCreatedEvent({
+          event,
+          offerAddress: offer.offerAddress,
+          signature,
+          slot,
+          type: offer.type,
+        });
         return normalized ? [normalized] : [];
       } catch {
         return [];

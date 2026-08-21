@@ -20,4 +20,5 @@ export type {
   NotificationJobStatus,
   Platform,
   Subscription,
+  SubscriptionType,
 } from "../generated/prisma/client";

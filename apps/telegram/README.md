@@ -4,12 +4,12 @@ Telegram bridge for Jupiter Offerbot. It lets users manage mint watches in priva
 
 ## Commands
 
-| Command                   | Description                                                    |
-| ------------------------- | -------------------------------------------------------------- |
-| `/start`                  | Shows Offerbot help.                                           |
-| `/list`                   | Lists watched mints and their optional APY ceilings.           |
-| `/watch <mint> [max_apy]` | Watches a Solana mint, optionally up to an APY such as `7.25`. |
-| `/unwatch <mint>`         | Stops watching a mint.                                         |
+| Command                                  | Description                                                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------------- |
+| `/start`                                 | Shows Offerbot help.                                                              |
+| `/list`                                  | Lists watched mints and their optional APY ceilings.                              |
+| `/watch <borrow\|lend> <mint> [max_apy]` | Watches one offer type for a Solana mint, optionally up to an APY such as `7.25`. |
+| `/unwatch <borrow\|lend> <mint>`         | Stops watching that offer type.                                                   |
 
 Commands are available only in direct messages. Display APYs use two decimal places, while requests to the API use integer hundredths of a percent.
 

@@ -1,4 +1,5 @@
 import {
+  CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   getOfferEventV2Decoder,
   OFFER_CREATED_V2_DISCRIMINATOR,
@@ -8,11 +9,19 @@ import {
 import { z } from "zod";
 import { hasPrefix, isSameBytes } from "./utils";
 
-export { CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR, OFFERBOOK_PROGRAM_ADDRESS };
+export {
+  CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR,
+  CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
+  OFFERBOOK_PROGRAM_ADDRESS,
+};
+
+export const OfferTypeSchema = z.enum(["borrow", "lend"]);
+export type OfferType = z.infer<typeof OfferTypeSchema>;
 
 export const OfferCreatedSchema = z.object({
   offerAddress: z.string().min(1),
   mint: z.string().min(1),
+  type: OfferTypeSchema,
   apy: z.number().int(),
   signature: z.string().min(1),
   slot: z.number().int().nonnegative(),
@@ -22,8 +31,18 @@ export const OfferCreatedSchema = z.object({
 export type OfferCreated = z.infer<typeof OfferCreatedSchema>;
 const EVENT_CPI_WRAPPER_SIZE = 8;
 
+export function getOfferCreationType(data: Uint8Array): OfferType | undefined {
+  if (isSameBytes(data.subarray(0, 8), CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR)) {
+    return "borrow";
+  }
+  if (isSameBytes(data.subarray(0, 8), CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR)) {
+    return "lend";
+  }
+  return undefined;
+}
+
 export function isOfferCreationInstruction(data: Uint8Array): boolean {
-  return isSameBytes(data.subarray(0, 8), CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR);
+  return getOfferCreationType(data) !== undefined;
 }
 
 export function decodeOfferCreatedEvent(bytes: Uint8Array): OfferEventV2 | undefined {
@@ -47,6 +66,7 @@ export function normalizeOfferCreatedEvent(input: {
   offerAddress: string;
   signature: string;
   slot: number;
+  type: OfferType;
 }): OfferCreated | undefined {
   const collateral = input.event.collateral;
 
@@ -58,6 +78,7 @@ export function normalizeOfferCreatedEvent(input: {
   return OfferCreatedSchema.parse({
     offerAddress: input.offerAddress,
     mint: collateral.fields[0].mint.toBase58(),
+    type: input.type,
     apy: input.event.apy,
     signature: input.signature,
     slot: input.slot,

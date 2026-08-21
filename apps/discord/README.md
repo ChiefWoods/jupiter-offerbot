@@ -6,13 +6,13 @@ matching Offerbook notifications in that same conversation.
 
 ## Commands
 
-| Command                                            | Description                                                        |
-| -------------------------------------------------- | ------------------------------------------------------------------ |
-| `/offerbot`                                        | Introduces Offerbot.                                               |
-| `/list`                                            | Lists your watched mints.                                          |
-| `/watch mint:<base58> max_apy:<decimal optional>`  | Watches or updates a mint, optionally up to an APY such as `7.25`. |
-| `/update mint:<base58> max_apy:<decimal optional>` | Updates a watched mint's APY ceiling.                              |
-| `/unwatch mint:<base58>`                           | Stops watching a mint.                                             |
+| Command                                                                | Description                                   |
+| ---------------------------------------------------------------------- | --------------------------------------------- |
+| `/offerbot`                                                            | Introduces Offerbot.                          |
+| `/list`                                                                | Lists your watched mints.                     |
+| `/watch mint:<base58> type:<borrow\|lend> max_apy:<decimal optional>`  | Watches or updates one offer type for a mint. |
+| `/update mint:<base58> type:<borrow\|lend> max_apy:<decimal optional>` | Updates that typed watch's APY ceiling.       |
+| `/unwatch mint:<base58> type:<borrow\|lend>`                           | Stops watching that offer type.               |
 
 Display APYs use two decimal places, while requests to the API use integer hundredths of a percent.
 

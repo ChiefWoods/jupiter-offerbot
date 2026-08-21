@@ -1,4 +1,10 @@
-import type { Mint, Platform, PrismaClient, Subscription } from "../../generated/prisma/client";
+import type {
+  Mint,
+  Platform,
+  PrismaClient,
+  Subscription,
+  SubscriptionType,
+} from "../../generated/prisma/client";
 import type { JupiterClient } from "../../../../apps/api/src/jupiter";
 import { isPrismaUniqueError, serializable } from "../utils";
 
@@ -6,6 +12,7 @@ export type SubscriptionInput = {
   platform: Platform;
   userId: string;
   mint: string;
+  type: SubscriptionType;
   maxApy: number | null;
 };
 

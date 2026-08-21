@@ -40,7 +40,14 @@ export function createWebhookHandler(
         components: [
           {
             type: 1,
-            components: [{ type: 2, style: 5, label: "View offer", url: rendered.offerUrl }],
+            components: [
+              {
+                type: 2,
+                style: 5,
+                label: `View ${parsed.notification.type} offer`,
+                url: rendered.offerUrl,
+              },
+            ],
           },
         ],
       });

@@ -12,6 +12,11 @@ enum Platform {
   telegram
 }
 
+enum SubscriptionType {
+  borrow
+  lend
+}
+
 enum NotificationJobStatus {
   pending
   processing
@@ -24,13 +29,15 @@ model Subscription {
   platform         Platform
   userId           String            @map("user_id")
   mint             String
+  type             SubscriptionType  @default(borrow)
   maxApy           Int?              @map("max_apy")
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   notificationJobs NotificationJob[]
   mintMetadata     Mint             @relation(fields: [mint], references: [mint])
 
-  @@unique([platform, userId, mint])
+  @@unique([platform, userId, mint, type])
+  @@index([mint, type])
   @@map("subscriptions")
 }
 

@@ -3,6 +3,7 @@ import type { PrismaClient } from "../../generated/prisma/client";
 export type OfferCreatedInput = {
   offerAddress: string;
   mint: string;
+  type: "borrow" | "lend";
   apy: number;
   signature: string;
   listedAt: string;
@@ -15,7 +16,11 @@ export function createOfferRepository(prisma: PrismaClient) {
     async ingest(offer: OfferCreatedInput): Promise<OfferIngestResult> {
       const queued = await prisma.$transaction(async (tx) => {
         const subscriptions = await tx.subscription.findMany({
-          where: { mint: offer.mint, OR: [{ maxApy: null }, { maxApy: { gte: offer.apy } }] },
+          where: {
+            mint: offer.mint,
+            type: offer.type,
+            OR: [{ maxApy: null }, { maxApy: { gte: offer.apy } }],
+          },
           select: { id: true },
         });
         if (!subscriptions.length) return 0;

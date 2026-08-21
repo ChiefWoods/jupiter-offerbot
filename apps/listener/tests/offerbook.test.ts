@@ -7,8 +7,11 @@ import {
 } from "jupiter-sdk/offerbook/web3js";
 import { Address } from "@solana/web3.js";
 
-import { decodeOfferCreatedEvent, normalizeOfferCreatedEvent } from "../src/offerbook";
-import { createPingRequest } from "../src/event-stream";
+import {
+  decodeOfferCreatedEvent,
+  getOfferCreationType,
+  normalizeOfferCreatedEvent,
+} from "../src/offerbook";
 import {
   CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   isOfferCreationInstruction,
@@ -18,6 +21,8 @@ process.env.GRPC_ENDPOINT ??= "http://localhost:10000";
 process.env.SOLANA_RPC_URL ??= "http://localhost:8899";
 process.env.API_BASE_URL ??= "http://localhost:3000";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
+
+const { createPingRequest } = await import("../src/event-stream");
 
 const SOL_MINT = new Address("So11111111111111111111111111111111111111112");
 const TOKEN_PROGRAM = new Address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -81,10 +86,12 @@ test("decodes the wire-compatible OfferCreatedV2 event", () => {
       offerAddress: "fixture-offer-account-address",
       signature: "fixture-signature",
       slot: 123,
+      type: "borrow",
     }),
   ).toEqual({
     offerAddress: "fixture-offer-account-address",
     mint: SOL_MINT.toBase58(),
+    type: "borrow",
     apy: 700,
     signature: "fixture-signature",
     slot: 123,
@@ -92,7 +99,17 @@ test("decodes the wire-compatible OfferCreatedV2 event", () => {
   });
 });
 
-test("only recognizes CreateTokenPrincipalOffer instructions", () => {
+test("classifies supported offer creation instructions by subscription type", () => {
+  expect(
+    getOfferCreationType(new Uint8Array(CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR)),
+  ).toBe("borrow");
+  expect(
+    getOfferCreationType(new Uint8Array(CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR)),
+  ).toBe("lend");
+  expect(getOfferCreationType(new Uint8Array(8))).toBeUndefined();
+});
+
+test("recognizes both supported offer creation instructions", () => {
   expect(
     isOfferCreationInstruction(
       new Uint8Array(CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR),
@@ -102,5 +119,5 @@ test("only recognizes CreateTokenPrincipalOffer instructions", () => {
     isOfferCreationInstruction(
       new Uint8Array(CREATE_TOKEN_COLLATERAL_OFFER_INSTRUCTION_DISCRIMINATOR),
     ),
-  ).toBe(false);
+  ).toBe(true);
 });

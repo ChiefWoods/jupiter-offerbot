@@ -9,6 +9,7 @@ const notification = {
   offerAddress: "offer-address",
   mint: "So11111111111111111111111111111111111111112",
   symbol: "SOL",
+  type: "borrow",
   apy: 725,
   signature: "transaction-signature",
   listedAt: "2026-07-28T00:00:00.000Z",
@@ -47,7 +48,7 @@ test("a valid signed Discord delivery sends a direct message to its envelope use
   expect(sent).toHaveLength(1);
   expect(sent[0]?.id).toBe("42");
   expect(sent[0]?.message).toEqual({
-    content: expect.stringContaining("New offer listed!"),
+    content: expect.stringContaining("New borrow offer"),
     components: [
       {
         type: 1,
@@ -55,7 +56,7 @@ test("a valid signed Discord delivery sends a direct message to its envelope use
           {
             type: 2,
             style: 5,
-            label: "View offer",
+            label: "View borrow offer",
             url: "https://offerbook.jup.ag/tokens/borrow?offerId=offer-address",
           },
         ],

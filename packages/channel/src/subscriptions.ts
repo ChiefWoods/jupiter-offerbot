@@ -3,17 +3,20 @@ import type { AppType } from "@jupiter-offerbot/api/rpc";
 import type { hc, InferResponseType } from "hono/client";
 
 export type ChannelPlatform = "discord" | "telegram";
+export type SubscriptionType = "borrow" | "lend";
 
 export type CreateSubscriptionInput = {
   platform: ChannelPlatform;
   userId: string;
   mint: string;
+  type: SubscriptionType;
   maxApy: number | null;
 };
 
 export type Subscription = {
   id: string;
   mint: string;
+  type: SubscriptionType;
   symbol: string | null;
   maxApy: number | null;
 };
@@ -28,10 +31,6 @@ export type SubscriptionApi = {
 type ApiClient = ReturnType<typeof hc<AppType>>;
 type CreateSubscriptionResponse = InferResponseType<ApiClient["v1"]["subscriptions"]["$post"], 201>;
 type ListSubscriptionsResponse = InferResponseType<ApiClient["v1"]["subscriptions"]["$get"]>;
-
-export function formatMint(mint: string, symbol: string | null): string {
-  return `${mint}${symbol ? ` (${symbol})` : ""}`;
-}
 
 export class ApiClientError extends Error {
   constructor(readonly code: string) {

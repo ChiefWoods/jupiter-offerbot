@@ -3,11 +3,14 @@ import { z } from "zod";
 
 export const PlatformSchema = z.enum(["discord", "telegram"]);
 export type Platform = z.infer<typeof PlatformSchema>;
+export const SubscriptionTypeSchema = z.enum(["borrow", "lend"]);
+export type SubscriptionType = z.infer<typeof SubscriptionTypeSchema>;
 
 export const CreateSubscriptionSchema = z.object({
   platform: PlatformSchema,
   userId: z.string().min(1).max(128),
   mint: z.string().refine(isAddress, "Must be a Solana address"),
+  type: SubscriptionTypeSchema,
   maxApy: z.number().int().nullable(),
 });
 
@@ -22,6 +25,7 @@ export type UpdateSubscription = z.infer<typeof UpdateSubscriptionSchema>;
 export const OfferCreatedSchema = z.object({
   offerAddress: z.string().min(1),
   mint: z.string().refine(isAddress, "Must be a Solana address"),
+  type: SubscriptionTypeSchema,
   apy: z.number().int(),
   signature: z.string().min(1),
   slot: z.number().int().nonnegative(),

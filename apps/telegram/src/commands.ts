@@ -3,8 +3,10 @@ import {
   ApiClientError,
   formatApy,
   formatMint,
+  formatSubscriptionAsset,
   parseDisplayApy,
   type SubscriptionApi,
+  type SubscriptionType,
 } from "@jupiter-offerbot/channel";
 import type { CommandContext, Context } from "grammy";
 
@@ -28,6 +30,10 @@ function apiMessage(error: unknown): string {
   }
 }
 
+function isSubscriptionType(value: string | undefined): value is SubscriptionType {
+  return value === "borrow" || value === "lend";
+}
+
 export function createCommandHandlers(api: SubscriptionApi) {
   const requireDirectMessage = async (context: CommandContext<Context>) => {
     const id = userId(context);
@@ -43,10 +49,10 @@ export function createCommandHandlers(api: SubscriptionApi) {
         `Welcome to Offerbot!
         
 Commands:
-  \`/watch <mint> [max_apy]\` - Watch a mint at an optional APY ceiling
-  \`/update <mint> [max_apy]\` - Update a watched mint's APY ceiling
+  \`/watch <borrow|lend> <mint> [max_apy]\` - Watch a mint at an optional APY ceiling
+  \`/update <borrow|lend> <mint> [max_apy]\` - Update a watched mint's APY ceiling
   \`/list\` - List your watched mints
-  \`/unwatch <mint>\` - Stop watching a mint`,
+  \`/unwatch <borrow|lend> <mint>\` - Stop watching a mint`,
       );
     },
     async list(context: CommandContext<Context>) {
@@ -57,7 +63,7 @@ Commands:
         const subscriptions = await api.list(id);
         if (!subscriptions.length) {
           await context.reply(
-            "You are not watching any mints yet. Use /watch <mint> [max_apy] to begin.",
+            "You are not watching any mints yet. Use /watch <borrow|lend> <mint> [max_apy] to begin.",
           );
           return;
         }
@@ -65,7 +71,7 @@ Commands:
           subscriptions
             .map(
               (subscription) =>
-                `${formatMint(subscription.mint, subscription.symbol)} — ${subscription.maxApy === null ? "any%" : "max " + formatApy(subscription.maxApy)}`,
+                `${formatMint(subscription.mint, subscription.symbol)} (${subscription.type}) — ${subscription.maxApy === null ? "any%" : "max " + formatApy(subscription.maxApy)}`,
             )
             .join("\n\n"),
         );
@@ -77,10 +83,10 @@ Commands:
       const id = await requireDirectMessage(context);
       if (!id) return;
 
-      const [mint, maxApyText, ...extra] = context.match.trim().split(/\s+/);
+      const [type, mint, maxApyText, ...extra] = context.match.trim().split(/\s+/);
 
-      if (!mint || extra.length || !isAddress(mint)) {
-        await context.reply("Provide a valid Solana mint: /watch <mint> [max_apy].");
+      if (!isSubscriptionType(type) || !mint || extra.length || !isAddress(mint)) {
+        await context.reply("Usage: /watch <borrow|lend> <mint> [max_apy].");
         return;
       }
 
@@ -94,18 +100,26 @@ Commands:
       }
 
       try {
-        const subscription = await api.create({ platform: "telegram", userId: id, mint, maxApy });
+        const subscription = await api.create({
+          platform: "telegram",
+          userId: id,
+          mint,
+          type,
+          maxApy,
+        });
         await context.reply(
-          `Watching ${formatMint(mint, subscription.symbol)} at ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `${type === "borrow" ? "Borrow" : "Lend"}-offer alerts enabled for ${formatSubscriptionAsset(mint, subscription.symbol)}, ${maxApy === null ? "at any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         if (error instanceof ApiClientError && error.code === "SUBSCRIPTION_ALREADY_EXISTS") {
           try {
-            const subscription = (await api.list(id)).find((item) => item.mint === mint);
+            const subscription = (await api.list(id)).find(
+              (item) => item.mint === mint && item.type === type,
+            );
             if (!subscription) throw error;
             await api.update(subscription.id, maxApy);
             await context.reply(
-              `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+              `${type === "borrow" ? "Borrow" : "Lend"}-offer alert updated for ${formatSubscriptionAsset(mint, subscription.symbol)}: ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
             );
           } catch (updateError) {
             await context.reply(apiMessage(updateError));
@@ -119,10 +133,10 @@ Commands:
       const id = await requireDirectMessage(context);
       if (!id) return;
 
-      const [mint, maxApyText, ...extra] = context.match.trim().split(/\s+/);
+      const [type, mint, maxApyText, ...extra] = context.match.trim().split(/\s+/);
 
-      if (!mint || extra.length || !isAddress(mint)) {
-        await context.reply("Provide a valid Solana mint: /update <mint> [max_apy].");
+      if (!isSubscriptionType(type) || !mint || extra.length || !isAddress(mint)) {
+        await context.reply("Usage: /update <borrow|lend> <mint> [max_apy].");
         return;
       }
 
@@ -136,14 +150,16 @@ Commands:
       }
 
       try {
-        const subscription = (await api.list(id)).find((item) => item.mint === mint);
+        const subscription = (await api.list(id)).find(
+          (item) => item.mint === mint && item.type === type,
+        );
         if (!subscription) {
           await context.reply("You are not watching that mint.");
           return;
         }
         await api.update(subscription.id, maxApy);
         await context.reply(
-          `Updated ${formatMint(mint, subscription.symbol)} to ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
+          `${type === "borrow" ? "Borrow" : "Lend"}-offer alert updated for ${formatSubscriptionAsset(mint, subscription.symbol)}: ${maxApy === null ? "any APY" : `up to ${formatApy(maxApy)} APY`}.`,
         );
       } catch (error) {
         await context.reply(apiMessage(error));
@@ -153,25 +169,29 @@ Commands:
       const id = await requireDirectMessage(context);
       if (!id) return;
 
-      const mint = context.match.trim();
+      const [type, mint, ...extra] = context.match.trim().split(/\s+/);
 
-      if (mint === "") {
-        await context.reply("Provide the mint to cancel: /unwatch <mint>.");
+      if (!isSubscriptionType(type) || !mint || extra.length) {
+        await context.reply("Usage: /unwatch <borrow|lend> <mint>.");
         return;
       }
 
       if (!isAddress(mint)) {
-        await context.reply("Provide a valid Solana mint: /unwatch <mint>.");
+        await context.reply("Provide a valid Solana mint: /unwatch <borrow|lend> <mint>.");
         return;
       }
 
       try {
-        const subscription = (await api.list(id)).find((item) => item.mint === mint);
+        const subscription = (await api.list(id)).find(
+          (item) => item.mint === mint && item.type === type,
+        );
         if (!subscription || !(await api.remove(subscription.id))) {
           await context.reply("There is no subscription for that mint to cancel.");
           return;
         }
-        await context.reply(`Stopped watching ${formatMint(mint, subscription.symbol)}.`);
+        await context.reply(
+          `${type === "borrow" ? "Borrow" : "Lend"}-offer alerts disabled for ${formatSubscriptionAsset(mint, subscription.symbol)}.`,
+        );
       } catch (error) {
         await context.reply(apiMessage(error));
       }

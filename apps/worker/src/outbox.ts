@@ -24,6 +24,7 @@ export function createOutboxWorker(
           offerAddress: job.offerAddress,
           mint: job.mint,
           symbol: job.mintMetadata.symbol,
+          type: job.subscription.type,
           apy: job.apy,
           signature: job.signature,
           listedAt: job.listedAt.toISOString(),

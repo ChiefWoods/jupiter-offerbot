@@ -9,7 +9,11 @@ export function createWebhookHandler(messenger: Api, secret: string, now: () => 
     try {
       const rendered = renderNotification(parsed.notification);
       await messenger.sendMessage(parsed.notification.userId, rendered.message, {
-        reply_markup: { inline_keyboard: [[{ text: "View offer", url: rendered.offerUrl }]] },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: `View ${parsed.notification.type} offer`, url: rendered.offerUrl }],
+          ],
+        },
       });
       return new Response(null, { status: 204 });
     } catch {

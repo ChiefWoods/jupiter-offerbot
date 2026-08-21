@@ -11,9 +11,10 @@ export {
 export {
   ApiClientError,
   createSubscriptionApi,
-  formatMint,
   type ChannelPlatform,
   type CreateSubscriptionInput,
   type Subscription,
   type SubscriptionApi,
+  type SubscriptionType,
 } from "./subscriptions";
+export { formatMint, formatShortMint, formatSubscriptionAsset } from "./utils";
