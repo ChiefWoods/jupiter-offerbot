@@ -1,11 +1,8 @@
 import {
   CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
-  getOfferEventV1Decoder,
   getOfferEventV2Decoder,
-  OFFER_CREATED_V1_DISCRIMINATOR,
   OFFER_CREATED_V2_DISCRIMINATOR,
   OFFERBOOK_PROGRAM_ADDRESS,
-  type OfferEventV1,
   type OfferEventV2,
 } from "jupiter-sdk/offerbook/web3js";
 import { z } from "zod";
@@ -23,21 +20,14 @@ export const OfferCreatedSchema = z.object({
 });
 
 export type OfferCreated = z.infer<typeof OfferCreatedSchema>;
-type OfferEvent = OfferEventV1 | OfferEventV2;
 const EVENT_CPI_WRAPPER_SIZE = 8;
 
 export function isOfferCreationInstruction(data: Uint8Array): boolean {
   return isSameBytes(data.subarray(0, 8), CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR);
 }
 
-export function decodeOfferCreatedEvent(bytes: Uint8Array): OfferEvent | undefined {
+export function decodeOfferCreatedEvent(bytes: Uint8Array): OfferEventV2 | undefined {
   const eventData = bytes.subarray(EVENT_CPI_WRAPPER_SIZE);
-  if (hasPrefix(eventData, OFFER_CREATED_V1_DISCRIMINATOR)) {
-    return getOfferEventV1Decoder().decode(
-      eventData.subarray(OFFER_CREATED_V1_DISCRIMINATOR.length),
-    );
-  }
-
   if (hasPrefix(eventData, OFFER_CREATED_V2_DISCRIMINATOR)) {
     return getOfferEventV2Decoder().decode(
       eventData.subarray(OFFER_CREATED_V2_DISCRIMINATOR.length),
@@ -53,7 +43,7 @@ export function decodeOfferCreatedEvent(bytes: Uint8Array): OfferEvent | undefin
  * is used when deriving `listedAt`.
  */
 export function normalizeOfferCreatedEvent(input: {
-  event: OfferEvent;
+  event: OfferEventV2;
   offerAddress: string;
   signature: string;
   slot: number;
