@@ -12,6 +12,7 @@ import { Address } from "@solana/web3.js";
 import bs58 from "bs58";
 
 import { decodeOfferCreatedEvent, normalizeOfferCreatedEvent } from "../src/offerbook";
+import { createPingRequest } from "../src/event-stream";
 import {
   CREATE_TOKEN_PRINCIPAL_OFFER_INSTRUCTION_DISCRIMINATOR,
   isOfferCreationInstruction,
@@ -71,6 +72,20 @@ function eventData(
 function eventCpiData(): Uint8Array {
   return new Uint8Array([...EVENT_CPI_DISCRIMINATOR, ...eventData()]);
 }
+
+test("creates the documented Yellowstone ping request", () => {
+  expect(createPingRequest(42)).toEqual({
+    ping: { id: 42 },
+    accounts: {},
+    accountsDataSlice: [],
+    transactions: {},
+    transactionsStatus: {},
+    blocks: {},
+    blocksMeta: {},
+    entry: {},
+    slots: {},
+  });
+});
 
 test("normalizes OfferCreatedV1", () => {
   const event = decodeOfferCreatedEvent(eventCpiData());

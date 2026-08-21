@@ -16,6 +16,21 @@ import {
 import { grpcClient } from "./solana";
 
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
+const PING_INTERVAL_MILLISECONDS = 30_000;
+
+export function createPingRequest(id: number): SubscribeRequest {
+  return {
+    ping: { id },
+    accounts: {},
+    accountsDataSlice: [],
+    transactions: {},
+    transactionsStatus: {},
+    blocks: {},
+    blocksMeta: {},
+    entry: {},
+    slots: {},
+  };
+}
 
 function getTransactionOfferAddresses(update: SubscribeUpdate): Map<number, string> {
   const transaction = update.transaction?.transaction?.transaction;
@@ -134,6 +149,10 @@ export async function streamOfferbookEvents(
         lastSubmittedSlot === undefined ? {} : { fromSlot: lastSubmittedSlot.toString() },
       );
       const stream = await grpcClient.subscribe(createOfferbookSubscription(lastSubmittedSlot));
+      let pingId = 0;
+      const pingInterval = setInterval(() => {
+        stream.write(createPingRequest(++pingId));
+      }, PING_INTERVAL_MILLISECONDS);
       const abortStream = () => stream.destroy();
       signal.addEventListener("abort", abortStream, { once: true });
 
@@ -153,6 +172,7 @@ export async function streamOfferbookEvents(
           logger.warn("Offerbook stream ended; reopening");
         }
       } finally {
+        clearInterval(pingInterval);
         signal.removeEventListener("abort", abortStream);
         stream.destroy();
 
