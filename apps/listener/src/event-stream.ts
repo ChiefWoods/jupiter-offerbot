@@ -133,7 +133,7 @@ function createOfferbookSubscription(fromSlot?: bigint): SubscribeRequest {
     blocks: {},
     blocksMeta: {},
     entry: {},
-    commitment: CommitmentLevel.CONFIRMED,
+    commitment: CommitmentLevel.PROCESSED,
     accountsDataSlice: [],
     ...(fromSlot === undefined ? {} : { fromSlot: fromSlot.toString() }),
   };
