@@ -32,6 +32,19 @@ export function createPingRequest(id: number): SubscribeRequest {
   };
 }
 
+export function replyToServerPing(
+  update: Pick<SubscribeUpdate, "ping">,
+  pingId: number,
+  write: (request: SubscribeRequest) => void,
+): boolean {
+  if (update.ping === undefined) {
+    return false;
+  }
+
+  write(createPingRequest(pingId));
+  return true;
+}
+
 function getTransactionOfferAddresses(update: SubscribeUpdate): Map<
   number,
   {
@@ -175,6 +188,11 @@ export async function streamOfferbookEvents(
         }
 
         for await (const update of stream) {
+          // on server ping, reply with a ping
+          if (replyToServerPing(update, ++pingId, (request) => stream.write(request))) {
+            continue;
+          }
+
           for (const offer of extractOfferCreatedEvents(update)) {
             await onOffer(offer);
             lastSubmittedSlot = BigInt(offer.slot);

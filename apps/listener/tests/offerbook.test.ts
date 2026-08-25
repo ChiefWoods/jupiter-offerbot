@@ -22,7 +22,7 @@ process.env.SOLANA_RPC_URL ??= "http://localhost:8899";
 process.env.API_BASE_URL ??= "http://localhost:3000";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
 
-const { createPingRequest } = await import("../src/event-stream");
+const { createPingRequest, replyToServerPing } = await import("../src/event-stream");
 
 const SOL_MINT = new Address("So11111111111111111111111111111111111111112");
 const TOKEN_PROGRAM = new Address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -42,6 +42,17 @@ test("creates the documented Yellowstone ping request", () => {
     entry: {},
     slots: {},
   });
+});
+
+test("replies to a Yellowstone server ping immediately", () => {
+  const requests: unknown[] = [];
+
+  const replied = replyToServerPing({ ping: {} }, 42, (request) => {
+    requests.push(request);
+  });
+
+  expect(replied).toBe(true);
+  expect(requests).toEqual([createPingRequest(42)]);
 });
 
 test("ignores unrelated event data", () => {
