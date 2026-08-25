@@ -13,7 +13,7 @@ import {
   OFFERBOOK_PROGRAM_ADDRESS,
   type OfferCreated,
 } from "./offerbook";
-import { grpcClient } from "./solana";
+import { grpcClient, solanaConnection } from "./solana";
 
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
 const PING_INTERVAL_MILLISECONDS = 30_000;
@@ -183,6 +183,10 @@ export async function streamOfferbookEvents(
 
         if (!signal.aborted) {
           logger.warn("Offerbook stream ended; reopening");
+          lastSubmittedSlot = await solanaConnection.getSlot();
+          logger.info("Reset Offerbook replay cursor to latest RPC slot", {
+            fromSlot: lastSubmittedSlot.toString(),
+          });
         }
       } finally {
         clearInterval(pingInterval);
