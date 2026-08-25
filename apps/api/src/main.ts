@@ -40,7 +40,20 @@ export function createApp(dependencies: ApiDependencies) {
     .use("*", cors({ origin: dependencies.allowedOrigins }))
     .use(logger())
     .use("*", requestId())
-    .use("/v1/*", dependencies.rateLimit)
+    .use("/v1/*", async (c, next) => {
+      // bypass rate limit for POST /v1/offers route
+      const isAuthenticatedListenerIngestion =
+        c.req.method === "POST" &&
+        c.req.path === "/v1/offers" &&
+        c.req.header("authorization") === `Bearer ${dependencies.listenerToken}`;
+    
+      if (isAuthenticatedListenerIngestion) {
+        await next();
+        return;
+      }
+    
+      await dependencies.rateLimit(c, next);
+    })
     .get("/health", (c) => c.json({ ok: true }))
     .get("/ready", async (c) => {
       try {
