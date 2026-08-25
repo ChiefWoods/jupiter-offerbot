@@ -46,12 +46,12 @@ export function createApp(dependencies: ApiDependencies) {
         c.req.method === "POST" &&
         c.req.path === "/v1/offers" &&
         c.req.header("authorization") === `Bearer ${dependencies.listenerToken}`;
-    
+
       if (isAuthenticatedListenerIngestion) {
         await next();
         return;
       }
-    
+
       await dependencies.rateLimit(c, next);
     })
     .get("/health", (c) => c.json({ ok: true }))
