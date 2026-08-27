@@ -22,7 +22,8 @@ process.env.SOLANA_RPC_URL ??= "http://localhost:8899";
 process.env.API_BASE_URL ??= "http://localhost:3000";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
 
-const { createPingRequest, replyToServerPing } = await import("../src/event-stream");
+const { createPingRequest, isReplayPositionExpired, replyToServerPing, writeStreamRequest } =
+  await import("../src/event-stream");
 
 const SOL_MINT = new Address("So11111111111111111111111111111111111111112");
 const TOKEN_PROGRAM = new Address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -53,6 +54,30 @@ test("replies to a Yellowstone server ping immediately", () => {
 
   expect(replied).toBe(true);
   expect(requests).toEqual([createPingRequest(42)]);
+});
+
+test("destroys the stream when a ping write fails", () => {
+  const error = new Error("send failed because receiver is gone");
+  const destroyed: unknown[] = [];
+
+  writeStreamRequest(
+    {
+      write: () => {
+        throw error;
+      },
+      destroy: (reason) => destroyed.push(reason),
+    },
+    createPingRequest(42),
+  );
+
+  expect(destroyed).toEqual([error]);
+});
+
+test("recognizes Yellowstone's expired replay-cursor error", () => {
+  expect(
+    isReplayPositionExpired(new Error("failed to get replay position for slot 441816124")),
+  ).toBe(true);
+  expect(isReplayPositionExpired(new Error("send failed because receiver is gone"))).toBe(false);
 });
 
 test("ignores unrelated event data", () => {
