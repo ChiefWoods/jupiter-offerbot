@@ -32,6 +32,43 @@ export function createPingRequest(id: number): SubscribeRequest {
   };
 }
 
+export function writeStreamRequest(
+  stream: {
+    write(request: SubscribeRequest): unknown;
+    destroy(error?: Error): void;
+  },
+  request: SubscribeRequest,
+): void {
+  try {
+    stream.write(request);
+  } catch (error) {
+    stream.destroy(error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+export function isReplayPositionExpired(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.includes("failed to get replay position")
+  );
+}
+
+export function replyToServerPing(
+  update: Pick<SubscribeUpdate, "ping">,
+  pingId: number,
+  write: (request: SubscribeRequest) => void,
+): boolean {
+  if (update.ping === undefined) {
+    return false;
+  }
+
+  write(createPingRequest(pingId));
+  return true;
+}
+
 function getTransactionOfferAddresses(update: SubscribeUpdate): Map<
   number,
   {
@@ -164,7 +201,7 @@ export async function streamOfferbookEvents(
       const stream = await grpcClient.subscribe(createOfferbookSubscription(lastSubmittedSlot));
       let pingId = 0;
       const pingInterval = setInterval(() => {
-        stream.write(createPingRequest(++pingId));
+        writeStreamRequest(stream, createPingRequest(++pingId));
       }, PING_INTERVAL_MILLISECONDS);
       const abortStream = () => stream.destroy();
       signal.addEventListener("abort", abortStream, { once: true });
@@ -175,6 +212,13 @@ export async function streamOfferbookEvents(
         }
 
         for await (const update of stream) {
+          // on server ping, reply with a ping
+          if (
+            replyToServerPing(update, ++pingId, (request) => writeStreamRequest(stream, request))
+          ) {
+            continue;
+          }
+
           for (const offer of extractOfferCreatedEvents(update)) {
             await onOffer(offer);
             lastSubmittedSlot = BigInt(offer.slot);
@@ -202,6 +246,21 @@ export async function streamOfferbookEvents(
     } catch (error) {
       if (signal.aborted) {
         break;
+      }
+
+      if (isReplayPositionExpired(error)) {
+        try {
+          lastSubmittedSlot = await solanaConnection.getSlot();
+          reconnectAttempt = 0;
+          logger.warn("Offerbook replay cursor expired; reopening from latest RPC slot", {
+            fromSlot: lastSubmittedSlot.toString(),
+          });
+          continue;
+        } catch (resetError) {
+          logger.error("Unable to reset expired Offerbook replay cursor", {
+            ...serializeError(resetError),
+          });
+        }
       }
 
       const delay =
