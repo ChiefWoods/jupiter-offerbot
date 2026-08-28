@@ -17,6 +17,7 @@ import { grpcClient, solanaConnection } from "./solana";
 
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
 const PING_INTERVAL_MILLISECONDS = 30_000;
+const PING_PONG_TIMEOUT_MILLISECONDS = 60_000;
 
 export function createPingRequest(id: number): SubscribeRequest {
   return {
@@ -29,6 +30,44 @@ export function createPingRequest(id: number): SubscribeRequest {
     blocksMeta: {},
     entry: {},
     slots: {},
+  };
+}
+
+export function createPingController(
+  write: (request: SubscribeRequest) => void,
+  now: () => number = Date.now,
+): {
+  handlePong(update: Pick<SubscribeUpdate, "pong">): boolean;
+  hasTimedOut(timeoutMs: number): boolean;
+  send(): boolean;
+} {
+  let nextPingId = 0;
+  let pendingPingId: number | undefined;
+  let pendingPingSentAt: number | undefined;
+
+  return {
+    send() {
+      if (pendingPingId !== undefined) {
+        return false;
+      }
+
+      pendingPingId = ++nextPingId;
+      pendingPingSentAt = now();
+      write(createPingRequest(pendingPingId));
+      return true;
+    },
+    handlePong(update) {
+      if (update.pong?.id !== pendingPingId) {
+        return false;
+      }
+
+      pendingPingId = undefined;
+      pendingPingSentAt = undefined;
+      return true;
+    },
+    hasTimedOut(timeoutMs) {
+      return pendingPingSentAt !== undefined && now() - pendingPingSentAt >= timeoutMs;
+    },
   };
 }
 
@@ -199,9 +238,18 @@ export async function streamOfferbookEvents(
         lastSubmittedSlot === undefined ? {} : { fromSlot: lastSubmittedSlot.toString() },
       );
       const stream = await grpcClient.subscribe(createOfferbookSubscription(lastSubmittedSlot));
-      let pingId = 0;
+      const clientPings = createPingController((request) => writeStreamRequest(stream, request));
+      let serverPingId = 0;
       const pingInterval = setInterval(() => {
-        writeStreamRequest(stream, createPingRequest(++pingId));
+        if (clientPings.hasTimedOut(PING_PONG_TIMEOUT_MILLISECONDS)) {
+          logger.warn("Offerbook ping acknowledgement timed out; reopening stream", {
+            timeoutMs: PING_PONG_TIMEOUT_MILLISECONDS,
+          });
+          stream.destroy(new Error("Offerbook ping acknowledgement timed out"));
+          return;
+        }
+
+        clientPings.send();
       }, PING_INTERVAL_MILLISECONDS);
       const abortStream = () => stream.destroy();
       signal.addEventListener("abort", abortStream, { once: true });
@@ -212,9 +260,15 @@ export async function streamOfferbookEvents(
         }
 
         for await (const update of stream) {
+          if (clientPings.handlePong(update)) {
+            continue;
+          }
+
           // on server ping, reply with a ping
           if (
-            replyToServerPing(update, ++pingId, (request) => writeStreamRequest(stream, request))
+            replyToServerPing(update, ++serverPingId, (request) =>
+              writeStreamRequest(stream, request),
+            )
           ) {
             continue;
           }
