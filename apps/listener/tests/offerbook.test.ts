@@ -22,8 +22,13 @@ process.env.SOLANA_RPC_URL ??= "http://localhost:8899";
 process.env.API_BASE_URL ??= "http://localhost:3000";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
 
-const { createPingRequest, isReplayPositionExpired, replyToServerPing, writeStreamRequest } =
-  await import("../src/event-stream");
+const {
+  createPingController,
+  createPingRequest,
+  isReplayPositionExpired,
+  replyToServerPing,
+  writeStreamRequest,
+} = await import("../src/event-stream");
 
 const SOL_MINT = new Address("So11111111111111111111111111111111111111112");
 const TOKEN_PROGRAM = new Address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -43,6 +48,38 @@ test("creates the documented Yellowstone ping request", () => {
     entry: {},
     slots: {},
   });
+});
+
+test("sends one client ping until its matching pong is received", () => {
+  const requests: unknown[] = [];
+  const pings = createPingController((request) => requests.push(request));
+
+  pings.send();
+  pings.send();
+  pings.handlePong({ pong: { id: 99 } });
+  pings.send();
+  pings.handlePong({ pong: { id: 1 } });
+  pings.send();
+
+  expect(requests).toEqual([createPingRequest(1), createPingRequest(2)]);
+});
+
+test("expires an unacknowledged client ping after its deadline", () => {
+  let now = 0;
+  const pings = createPingController(
+    () => {},
+    () => now,
+  );
+
+  pings.send();
+  now = 59_999;
+  expect(pings.hasTimedOut(60_000)).toBe(false);
+
+  now = 60_000;
+  expect(pings.hasTimedOut(60_000)).toBe(true);
+
+  pings.handlePong({ pong: { id: 1 } });
+  expect(pings.hasTimedOut(60_000)).toBe(false);
 });
 
 test("replies to a Yellowstone server ping immediately", () => {
