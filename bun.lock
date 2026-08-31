@@ -49,7 +49,7 @@
         "@triton-one/yellowstone-grpc": "^5.0.9",
         "bs58": "^6.0.0",
         "hono": "^4.11.9",
-        "jupiter-sdk": "0.2.1",
+        "jupiter-sdk": "0.4.0",
         "zod": "^4.4.3",
       },
     },
@@ -615,7 +615,7 @@
 
     "json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
-    "jupiter-sdk": ["jupiter-sdk@0.2.1", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-lcgGzYHqRm0B10WFqsEemuTSP10c+UytIwCwrOUEZX2uI0YJl8hLu068WMd10+2Ai2kVyeQO6RL/mOyOqQqM5Q=="],
+    "jupiter-sdk": ["jupiter-sdk@0.4.0", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-7SKME53iSipCBlvfldyLNNT8KVp1nxYIpXd7Nl6G10e6AT3ObHBnEGQF+eRU617+7OChrUQUXiHwau/EfeR2+w=="],
 
     "lint-staged": ["lint-staged@17.2.0", "", { "dependencies": { "picomatch": "^4.0.5", "string-argv": "^0.3.2", "tinyexec": "^1.2.4" }, "optionalDependencies": { "yaml": "^2.9.0" }, "bin": { "lint-staged": "bin/lint-staged.js" } }, "sha512-FchGnFe4i4B1C/a35SPU9bNGPEHSC1+1iV0plLjzBmKVe9klZrlRfSgK6Cw4VeHyqOXbJUXP0vON61uRftNQ0A=="],
 

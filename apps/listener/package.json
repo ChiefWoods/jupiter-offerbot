@@ -20,7 +20,7 @@
     "@triton-one/yellowstone-grpc": "^5.0.9",
     "bs58": "^6.0.0",
     "hono": "^4.11.9",
-    "jupiter-sdk": "0.2.1",
+    "jupiter-sdk": "0.4.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {},
