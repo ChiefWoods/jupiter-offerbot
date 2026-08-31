@@ -17,7 +17,7 @@
     "@jupiter-offerbot/api": "workspace:*",
     "@jupiter-offerbot/logger": "workspace:*",
     "@solana/web3.js": "3.0.0-rc.2",
-    "@triton-one/yellowstone-grpc": "^5.0.9",
+    "@triton-one/yellowstone-grpc": "^7.0.0",
     "bs58": "^6.0.0",
     "hono": "^4.11.9",
     "jupiter-sdk": "0.4.0",
