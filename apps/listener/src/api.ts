@@ -19,5 +19,7 @@ export async function submitOffer(offer: OfferCreated, logger: Logger): Promise<
   logger.info("Submitted Offerbook offer", {
     offerAddress: offer.offerAddress,
     slot: offer.slot,
+    listedAt: offer.listedAt,
+    signature: offer.signature,
   });
 }
