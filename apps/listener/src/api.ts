@@ -7,6 +7,11 @@ import { type OfferCreated } from "./offerbook";
 const api = hc<AppType>(env.API_BASE_URL);
 
 export async function submitOffer(offer: OfferCreated, logger: Logger): Promise<void> {
+  logger.info("Submitting Offerbook offer", {
+    offerAddress: offer.offerAddress,
+    signature: offer.signature,
+  });
+
   const response = await api.v1.offers.$post(
     { json: offer },
     { headers: { authorization: `Bearer ${env.LISTENER_API_TOKEN}` } },
