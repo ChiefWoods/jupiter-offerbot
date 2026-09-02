@@ -6,6 +6,7 @@ import {
   OfferStatus,
 } from "jupiter-sdk/offerbook/web3js";
 import { Address } from "@solana/web3.js";
+import type { ClientDuplexStream } from "@triton-one/yellowstone-grpc";
 
 import {
   decodeOfferCreatedEvent,
@@ -22,13 +23,7 @@ process.env.SOLANA_RPC_URL ??= "http://localhost:8899";
 process.env.API_BASE_URL ??= "http://localhost:3000";
 process.env.LISTENER_API_TOKEN ??= "listener-token";
 
-const {
-  createPingController,
-  createPingRequest,
-  isReplayPositionExpired,
-  replyToServerPing,
-  writeStreamRequest,
-} = await import("../src/event-stream");
+const { createOfferbookSubscription, destroyStreamOnAbort } = await import("../src/event-stream");
 
 const SOL_MINT = new Address("So11111111111111111111111111111111111111112");
 const TOKEN_PROGRAM = new Address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -36,85 +31,42 @@ const CREATOR = new Address("11111111111111111111111111111111");
 const EVENT_CPI_DISCRIMINATOR = new Uint8Array([228, 69, 165, 46, 81, 203, 154, 29]);
 const OFFER_CREATED_V2_DISCRIMINATOR = new Uint8Array([107, 228, 58, 148, 11, 235, 232, 181]);
 
-test("creates the documented Yellowstone ping request", () => {
-  expect(createPingRequest(42)).toEqual({
-    ping: { id: 42 },
+test("creates the initial native-reconnect Offerbook subscription", () => {
+  expect(createOfferbookSubscription()).toEqual({
     accounts: {},
     accountsDataSlice: [],
-    transactions: {},
+    transactions: {
+      offerbook: {
+        vote: false,
+        failed: false,
+        accountInclude: ["offerbkFMvVfpQhL8ZQ5iromnjct5rz3r52B9ewu3ie"],
+        accountExclude: [],
+        accountRequired: [],
+      },
+    },
     transactionsStatus: {},
     blocks: {},
     blocksMeta: {},
     entry: {},
     slots: {},
+    commitment: 0,
   });
 });
 
-test("sends one client ping until its matching pong is received", () => {
-  const requests: unknown[] = [];
-  const pings = createPingController((request) => requests.push(request));
+test("destroys a newly created stream when shutdown occurred during startup", () => {
+  const controller = new AbortController();
+  controller.abort();
+  let destroyed = false;
 
-  pings.send();
-  pings.send();
-  pings.handlePong({ pong: { id: 99 } });
-  pings.send();
-  pings.handlePong({ pong: { id: 1 } });
-  pings.send();
-
-  expect(requests).toEqual([createPingRequest(1), createPingRequest(2)]);
-});
-
-test("expires an unacknowledged client ping after its deadline", () => {
-  let now = 0;
-  const pings = createPingController(
-    () => {},
-    () => now,
-  );
-
-  pings.send();
-  now = 59_999;
-  expect(pings.hasTimedOut(60_000)).toBe(false);
-
-  now = 60_000;
-  expect(pings.hasTimedOut(60_000)).toBe(true);
-
-  pings.handlePong({ pong: { id: 1 } });
-  expect(pings.hasTimedOut(60_000)).toBe(false);
-});
-
-test("replies to a Yellowstone server ping immediately", () => {
-  const requests: unknown[] = [];
-
-  const replied = replyToServerPing({ ping: {} }, 42, (request) => {
-    requests.push(request);
-  });
-
-  expect(replied).toBe(true);
-  expect(requests).toEqual([createPingRequest(42)]);
-});
-
-test("destroys the stream when a ping write fails", () => {
-  const error = new Error("send failed because receiver is gone");
-  const destroyed: unknown[] = [];
-
-  writeStreamRequest(
-    {
-      write: () => {
-        throw error;
-      },
-      destroy: (reason) => destroyed.push(reason),
+  const stream = {
+    destroy: () => {
+      destroyed = true;
     },
-    createPingRequest(42),
-  );
+  } as unknown as ClientDuplexStream;
+  const removeAbortListener = destroyStreamOnAbort(controller.signal, stream);
 
-  expect(destroyed).toEqual([error]);
-});
-
-test("recognizes Yellowstone's expired replay-cursor error", () => {
-  expect(
-    isReplayPositionExpired(new Error("failed to get replay position for slot 441816124")),
-  ).toBe(true);
-  expect(isReplayPositionExpired(new Error("send failed because receiver is gone"))).toBe(false);
+  expect(destroyed).toBe(true);
+  removeAbortListener();
 });
 
 test("ignores unrelated event data", () => {

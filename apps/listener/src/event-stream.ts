@@ -1,5 +1,6 @@
 import { serializeError, type Logger } from "@jupiter-offerbot/logger";
 import {
+  ClientDuplexStream,
   CommitmentLevel,
   type SubscribeRequest,
   type SubscribeUpdate,
@@ -13,113 +14,14 @@ import {
   OFFERBOOK_PROGRAM_ADDRESS,
   type OfferCreated,
 } from "./offerbook";
-import { grpcClient, solanaConnection } from "./solana";
+import { grpcClient } from "./solana";
 
-const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000];
-const PING_INTERVAL_MILLISECONDS = 30_000;
-const PING_PONG_TIMEOUT_MILLISECONDS = 60_000;
-
-export function createPingRequest(id: number): SubscribeRequest {
-  return {
-    ping: { id },
-    accounts: {},
-    accountsDataSlice: [],
-    transactions: {},
-    transactionsStatus: {},
-    blocks: {},
-    blocksMeta: {},
-    entry: {},
-    slots: {},
-  };
-}
-
-export function createPingController(
-  write: (request: SubscribeRequest) => void,
-  now: () => number = Date.now,
-): {
-  handlePong(update: Pick<SubscribeUpdate, "pong">): boolean;
-  hasTimedOut(timeoutMs: number): boolean;
-  send(): boolean;
-} {
-  let nextPingId = 0;
-  let pendingPingId: number | undefined;
-  let pendingPingSentAt: number | undefined;
-
-  return {
-    send() {
-      if (pendingPingId !== undefined) {
-        return false;
-      }
-
-      pendingPingId = ++nextPingId;
-      pendingPingSentAt = now();
-      write(createPingRequest(pendingPingId));
-      return true;
-    },
-    handlePong(update) {
-      if (update.pong?.id !== pendingPingId) {
-        return false;
-      }
-
-      pendingPingId = undefined;
-      pendingPingSentAt = undefined;
-      return true;
-    },
-    hasTimedOut(timeoutMs) {
-      return pendingPingSentAt !== undefined && now() - pendingPingSentAt >= timeoutMs;
-    },
-  };
-}
-
-export function writeStreamRequest(
-  stream: {
-    write(request: SubscribeRequest): unknown;
-    destroy(error?: Error): void;
-  },
-  request: SubscribeRequest,
-): void {
-  try {
-    stream.write(request);
-  } catch (error) {
-    stream.destroy(error instanceof Error ? error : new Error(String(error)));
-  }
-}
-
-export function isReplayPositionExpired(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof error.message === "string" &&
-    error.message.includes("failed to get replay position")
-  );
-}
-
-export function replyToServerPing(
-  update: Pick<SubscribeUpdate, "ping">,
-  pingId: number,
-  write: (request: SubscribeRequest) => void,
-): boolean {
-  if (update.ping === undefined) {
-    return false;
-  }
-
-  write(createPingRequest(pingId));
-  return true;
-}
-
-function getTransactionOfferAddresses(update: SubscribeUpdate): Map<
-  number,
-  {
-    offerAddress: string;
-    type: OfferCreated["type"];
-  }
-> {
+function getTransactionOfferAddresses(
+  update: SubscribeUpdate,
+): Map<number, { offerAddress: string; type: OfferCreated["type"] }> {
   const transaction = update.transaction?.transaction?.transaction;
   const message = transaction?.message;
-  if (!message) {
-    return new Map();
-  }
+  if (!message) return new Map();
 
   const accountKeys = [
     ...message.accountKeys,
@@ -133,8 +35,8 @@ function getTransactionOfferAddresses(update: SubscribeUpdate): Map<
       const offerAccountIndex = instruction.accounts[3];
       const offerAddress =
         offerAccountIndex === undefined ? undefined : accountKeys[offerAccountIndex];
-
       const type = getOfferCreationType(instruction.data);
+
       return programAddress === OFFERBOOK_PROGRAM_ADDRESS.toBase58() &&
         offerAddress !== undefined &&
         type !== undefined
@@ -150,9 +52,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
   const signature = transaction ? bs58.encode(transaction.signature) : undefined;
   const slot = Number(update.transaction?.slot);
 
-  if (!signature || !Number.isSafeInteger(slot) || slot < 0) {
-    return [];
-  }
+  if (!signature || !Number.isSafeInteger(slot) || slot < 0) return [];
 
   const accountKeys = [
     ...(transaction?.transaction?.message?.accountKeys ?? []),
@@ -162,9 +62,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
 
   return (transaction?.meta?.innerInstructions ?? []).flatMap((innerInstructions) => {
     const offer = offerAddresses.get(innerInstructions.index);
-    if (!offer) {
-      return [];
-    }
+    if (!offer) return [];
 
     return innerInstructions.instructions.flatMap((instruction) => {
       if (accountKeys[instruction.programIdIndex] !== OFFERBOOK_PROGRAM_ADDRESS.toBase58()) {
@@ -173,9 +71,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
 
       try {
         const event = decodeOfferCreatedEvent(instruction.data);
-        if (!event) {
-          return [];
-        }
+        if (!event) return [];
 
         const normalized = normalizeOfferCreatedEvent({
           event,
@@ -192,7 +88,7 @@ export function extractOfferCreatedEvents(update: SubscribeUpdate): OfferCreated
   });
 }
 
-function createOfferbookSubscription(fromSlot?: bigint): SubscribeRequest {
+export function createOfferbookSubscription(): SubscribeRequest {
   return {
     accounts: {},
     slots: {},
@@ -211,120 +107,65 @@ function createOfferbookSubscription(fromSlot?: bigint): SubscribeRequest {
     entry: {},
     commitment: CommitmentLevel.PROCESSED,
     accountsDataSlice: [],
-    ...(fromSlot === undefined ? {} : { fromSlot: fromSlot.toString() }),
   };
 }
 
-/**
- * Streams Offerbook transactions forever, replaying from the last submitted
- * slot after a disconnect. The API's job uniqueness makes replay safe.
- */
+async function handleUpdate(
+  update: SubscribeUpdate,
+  onOffer: (offer: OfferCreated) => Promise<void>,
+): Promise<void> {
+  for (const offer of extractOfferCreatedEvents(update)) {
+    await onOffer(offer);
+  }
+}
+
+export function destroyStreamOnAbort(signal: AbortSignal, stream: ClientDuplexStream): () => void {
+  const abortStream = () => stream.destroy();
+  if (signal.aborted) {
+    abortStream();
+    return () => {};
+  }
+
+  signal.addEventListener("abort", abortStream, { once: true });
+  return () => signal.removeEventListener("abort", abortStream);
+}
+
 export async function streamOfferbookEvents(
   onOffer: (offer: OfferCreated) => Promise<void>,
   signal: AbortSignal,
   logger: Logger,
 ): Promise<void> {
-  let lastSubmittedSlot: bigint | undefined;
-  let reconnectAttempt = 0;
-
   logger.info("Connecting to Yellowstone gRPC");
   await grpcClient.connect();
+  // terminate if the stream is aborted before connection is established
+  if (signal.aborted) return;
   logger.info("Connected to Yellowstone gRPC");
 
-  while (!signal.aborted) {
-    try {
-      logger.info(
-        "Opening Offerbook stream",
-        lastSubmittedSlot === undefined ? {} : { fromSlot: lastSubmittedSlot.toString() },
-      );
-      const stream = await grpcClient.subscribe(createOfferbookSubscription(lastSubmittedSlot));
-      const clientPings = createPingController((request) => writeStreamRequest(stream, request));
-      let serverPingId = 0;
-      const pingInterval = setInterval(() => {
-        if (clientPings.hasTimedOut(PING_PONG_TIMEOUT_MILLISECONDS)) {
-          logger.warn("Offerbook ping acknowledgement timed out; reopening stream", {
-            timeoutMs: PING_PONG_TIMEOUT_MILLISECONDS,
-          });
-          stream.destroy(new Error("Offerbook ping acknowledgement timed out"));
-          return;
-        }
+  const stream = await grpcClient.subscribe(createOfferbookSubscription());
+  const streamClosed = new Promise<void>((resolve, reject) => {
+    stream.on("error", (error) => {
+      reject(error);
+      stream.end();
+    });
+    stream.on("end", resolve);
+    stream.on("close", resolve);
+  });
+  const removeAbortListener = destroyStreamOnAbort(signal, stream);
 
-        clientPings.send();
-      }, PING_INTERVAL_MILLISECONDS);
-      const abortStream = () => stream.destroy();
-      signal.addEventListener("abort", abortStream, { once: true });
+  stream.on("data", (update: SubscribeUpdate) => {
+    stream.pause();
+    void handleUpdate(update, onOffer)
+      .catch((error) => {
+        logger.error("Failed to process Offerbook stream update", serializeError(error));
+      })
+      .finally(() => stream.resume());
+  });
 
-      try {
-        if (signal.aborted) {
-          stream.destroy();
-        }
-
-        for await (const update of stream) {
-          if (clientPings.handlePong(update)) {
-            continue;
-          }
-
-          // on server ping, reply with a ping
-          if (
-            replyToServerPing(update, ++serverPingId, (request) =>
-              writeStreamRequest(stream, request),
-            )
-          ) {
-            continue;
-          }
-
-          for (const offer of extractOfferCreatedEvents(update)) {
-            await onOffer(offer);
-            lastSubmittedSlot = BigInt(offer.slot);
-          }
-        }
-
-        if (!signal.aborted) {
-          logger.warn("Offerbook stream ended; reopening");
-          lastSubmittedSlot = await solanaConnection.getSlot();
-          logger.info("Reset Offerbook replay cursor to latest RPC slot", {
-            fromSlot: lastSubmittedSlot.toString(),
-          });
-        }
-      } finally {
-        clearInterval(pingInterval);
-        signal.removeEventListener("abort", abortStream);
-        stream.destroy();
-
-        if (signal.aborted) {
-          logger.info("Offerbook stream closed");
-        }
-      }
-
-      reconnectAttempt = 0;
-    } catch (error) {
-      if (signal.aborted) {
-        break;
-      }
-
-      if (isReplayPositionExpired(error)) {
-        try {
-          lastSubmittedSlot = await solanaConnection.getSlot();
-          reconnectAttempt = 0;
-          logger.warn("Offerbook replay cursor expired; reopening from latest RPC slot", {
-            fromSlot: lastSubmittedSlot.toString(),
-          });
-          continue;
-        } catch (resetError) {
-          logger.error("Unable to reset expired Offerbook replay cursor", {
-            ...serializeError(resetError),
-          });
-        }
-      }
-
-      const delay =
-        RECONNECT_DELAYS_MS[Math.min(reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)] ?? 30_000;
-      reconnectAttempt += 1;
-      logger.error("Offerbook stream disconnected", {
-        retryInMs: delay,
-        ...serializeError(error),
-      });
-      await Bun.sleep(delay);
-    }
+  logger.info("Opened Offerbook stream");
+  try {
+    await streamClosed;
+  } finally {
+    removeAbortListener();
+    stream.destroy();
   }
 }

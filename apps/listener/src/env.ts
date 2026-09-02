@@ -3,7 +3,6 @@ import { z } from "zod";
 const EnvSchema = z.object({
   GRPC_ENDPOINT: z.url(),
   GRPC_TOKEN: z.string().min(1).optional(),
-  SOLANA_RPC_URL: z.url(),
   API_BASE_URL: z.url(),
   LISTENER_API_TOKEN: z.string().min(1),
 });
