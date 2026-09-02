@@ -16,6 +16,8 @@ import {
 } from "./offerbook";
 import { grpcClient } from "./solana";
 
+const RECONNECT_DELAY_MILLISECONDS = 1_000;
+
 function getTransactionOfferAddresses(
   update: SubscribeUpdate,
 ): Map<number, { offerAddress: string; type: OfferCreated["type"] }> {
@@ -141,38 +143,47 @@ export async function streamOfferbookEvents(
   if (signal.aborted) return;
   logger.info("Connected to Yellowstone gRPC");
 
-  const stream = await grpcClient.subscribe(createOfferbookSubscription());
-  const streamClosed = new Promise<void>((resolve, reject) => {
-    stream.on("error", (error) => {
-      logger.error("Error in Offerbook stream", serializeError(error));
-      reject(error);
-      stream.end();
-    });
-    stream.on("end", () => {
-      logger.info("Offerbook stream ended");
-      resolve();
-    });
-    stream.on("close", () => {
-      logger.info("Offerbook stream closed");
-      resolve();
-    });
-  });
-  const removeAbortListener = destroyStreamOnAbort(signal, stream);
+  while (!signal.aborted) {
+    try {
+      const stream = await grpcClient.subscribe(createOfferbookSubscription());
+      const streamClosed = new Promise<void>((resolve, reject) => {
+        stream.on("error", (error) => {
+          logger.error("Error in Offerbook stream", serializeError(error));
+          reject(error);
+          stream.end();
+        });
+        stream.on("end", () => {
+          logger.info("Offerbook stream ended");
+          resolve();
+        });
+        stream.on("close", () => {
+          logger.info("Offerbook stream closed");
+          resolve();
+        });
+      });
+      const removeAbortListener = destroyStreamOnAbort(signal, stream);
 
-  stream.on("data", (update: SubscribeUpdate) => {
-    stream.pause();
-    void handleUpdate(update, onOffer)
-      .catch((error) => {
-        logger.error("Failed to process Offerbook stream update", serializeError(error));
-      })
-      .finally(() => stream.resume());
-  });
+      stream.on("data", (update: SubscribeUpdate) => {
+        stream.pause();
+        void handleUpdate(update, onOffer)
+          .catch((error) => {
+            logger.error("Failed to process Offerbook stream update", serializeError(error));
+          })
+          .finally(() => stream.resume());
+      });
 
-  logger.info("Opened Offerbook stream");
-  try {
-    await streamClosed;
-  } finally {
-    removeAbortListener();
-    stream.destroy();
+      logger.info("Opened Offerbook stream");
+      try {
+        await streamClosed;
+      } finally {
+        removeAbortListener();
+        stream.destroy();
+      }
+    } catch (error) {
+      if (signal.aborted) break;
+      logger.error("Offerbook stream disconnected; reopening", serializeError(error));
+    }
+
+    if (!signal.aborted) await Bun.sleep(RECONNECT_DELAY_MILLISECONDS);
   }
 }
