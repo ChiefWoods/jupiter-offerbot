@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { serializeError } from "../src";
 
 test("serializeError preserves Error instances for Pino", () => {
-  const error = new Error("offer ingestion failed");
+  const error = new Error("Offer ingestion failed");
 
   expect(serializeError(error)).toEqual({ err: error });
 });

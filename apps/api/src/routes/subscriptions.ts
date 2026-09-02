@@ -64,12 +64,12 @@ export function createSubscriptionsRouter(
             throw new ApiError("MINT_METADATA_UNAVAILABLE");
           if (
             cause instanceof Error &&
-            ["limit", "Subscription limit reached."].includes(cause.message)
+            ["Limit", "Subscription limit reached."].includes(cause.message)
           )
             throw new ApiError("SUBSCRIPTION_LIMIT_REACHED");
           if (
             cause instanceof Error &&
-            ["unique", "Subscription already exists."].includes(cause.message)
+            ["Unique", "Subscription already exists."].includes(cause.message)
           )
             throw new ApiError("SUBSCRIPTION_ALREADY_EXISTS");
           throw cause;

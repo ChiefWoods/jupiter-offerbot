@@ -34,13 +34,13 @@ function dependencies(): ApiDependencies {
               row.type === input.type,
           )
         )
-          throw new Error("unique");
+          throw new Error("Unique");
         if (
           subscriptions.filter(
             (row) => row.platform === input.platform && row.userId === input.userId,
           ).length >= 2
         )
-          throw new Error("limit");
+          throw new Error("Limit");
         const subscription = {
           id: crypto.randomUUID(),
           ...input,
@@ -284,7 +284,7 @@ test("returns the standard unexpected-error response with a request ID", async (
     ...dependencies(),
     offers: {
       async ingest() {
-        throw new Error("unexpected");
+        throw new Error("Unexpected");
       },
     },
   });

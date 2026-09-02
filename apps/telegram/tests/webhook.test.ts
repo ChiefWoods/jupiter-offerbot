@@ -107,7 +107,7 @@ test("a signed malformed delivery is rejected as a bad request", async () => {
 test("returns bad gateway when Telegram delivery fails", async () => {
   const now = 1_800_000_000_000;
   const handler = createWebhookHandler(
-    { sendMessage: async () => Promise.reject(new Error("blocked by user")) } as unknown as Api,
+    { sendMessage: async () => Promise.reject(new Error("Blocked by user")) } as unknown as Api,
     "secret",
     () => now,
   );

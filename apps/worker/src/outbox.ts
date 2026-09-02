@@ -46,7 +46,7 @@ export function createOutboxWorker(
             await notificationJobs.markDelivered(job.id);
             continue;
           }
-          throw new Error(`webhook returned HTTP ${response.status}`);
+          throw new Error(`Webhook returned HTTP ${response.status}`);
         } catch (cause) {
           const attempts = job.attempts + 1;
           const retryInMs = attempts < 5 ? backoff[attempts - 1] : undefined;
