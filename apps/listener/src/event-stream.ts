@@ -144,11 +144,18 @@ export async function streamOfferbookEvents(
   const stream = await grpcClient.subscribe(createOfferbookSubscription());
   const streamClosed = new Promise<void>((resolve, reject) => {
     stream.on("error", (error) => {
+      logger.error("Error in Offerbook stream", serializeError(error));
       reject(error);
       stream.end();
     });
-    stream.on("end", resolve);
-    stream.on("close", resolve);
+    stream.on("end", () => {
+      logger.info("Offerbook stream ended");
+      resolve();
+    });
+    stream.on("close", () => {
+      logger.info("Offerbook stream closed");
+      resolve();
+    });
   });
   const removeAbortListener = destroyStreamOnAbort(signal, stream);
 
