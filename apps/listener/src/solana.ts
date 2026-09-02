@@ -1,6 +1,7 @@
 import Client from "@triton-one/yellowstone-grpc";
 
 import { env } from "./env";
+import { JsReconnectPolicy } from "@triton-one/yellowstone-grpc/napi";
 
 export const grpcClient = new Client(
   env.GRPC_ENDPOINT,
@@ -27,5 +28,6 @@ export const grpcClient = new Client(
       maxRetries: 10,
     },
     slotRetention: 200,
+    policy: JsReconnectPolicy.RecoverMissedData,
   },
 );
