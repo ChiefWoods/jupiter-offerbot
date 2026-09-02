@@ -15,12 +15,8 @@ export function requestWithTimeout<T>(
 }
 
 export async function submitOffer(offer: OfferCreated, logger: Logger): Promise<void> {
-  logger.info("Submitting Offerbook offer", {
-    offerAddress: offer.offerAddress,
-    signature: offer.signature,
-  });
-
   let response: Awaited<ReturnType<typeof api.v1.offers.$post>>;
+
   try {
     response = await requestWithTimeout((signal) =>
       api.v1.offers.$post(
