@@ -43,6 +43,7 @@
       "name": "@jupiter-offerbot/listener",
       "version": "0.0.0",
       "dependencies": {
+        "@better-fetch/fetch": "^1.3.1",
         "@jupiter-offerbot/api": "workspace:*",
         "@jupiter-offerbot/logger": "workspace:*",
         "@solana/web3.js": "3.0.0-rc.2",
